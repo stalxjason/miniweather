@@ -1,0 +1,6 @@
+{
+  "name": "typhoon",
+  "version": "1.0.0",
+  "description": "台风云函数：代理中央气象台（NMC）免费台风接口，无需 key",
+  "main": "index.js"
+}

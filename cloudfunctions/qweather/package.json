@@ -1,0 +1,6 @@
+{
+  "name": "qweather",
+  "version": "1.0.0",
+  "description": "和风天气代理云函数（KEY 仅存服务端环境变量）",
+  "main": "index.js"
+}

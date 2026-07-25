@@ -1,0 +1,45 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/tide/tide",
+    "pages/search/search"
+  ],
+  "window": {
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#1677FF",
+    "navigationBarTitleText": "天气预报",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#F0F4FF"
+  },
+  "tabBar": {
+    "color": "#8E8E93",
+    "selectedColor": "#1677FF",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "天气",
+        "iconPath": "images/icon-weather.png",
+        "selectedIconPath": "images/icon-weather-active.png"
+      },
+      {
+        "pagePath": "pages/tide/tide",
+        "text": "潮汐",
+        "iconPath": "images/icon-tide.png",
+        "selectedIconPath": "images/icon-tide-active.png"
+      }
+    ]
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "你的位置信息将用于获取当地天气和潮汐数据"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getLocation"
+  ],
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents",
+  "__usePrivacyCheck__": true
+}

@@ -1,0 +1,175 @@
+<!-- pages/tide/tide.wxml - 潮汐表页面 -->
+<view class="container">
+  <!-- 顶部 -->
+  <view class="tide-hero">
+    <view class="tide-hero-title">🌊 潮汐表</view>
+    <view class="station-info" bindtap="openStationPicker" wx:if="{{!showSearch}}">
+      <text class="station-name">{{location.name}}</text>
+      <text class="text-sm" style="color:rgba(255,255,255,0.7)">切换地点 ›</text>
+    </view>
+    <view class="follow-hint" wx:if="{{locationFromWeather && !showSearch}}">默认跟随当前定位（精确坐标），点上方可单独设置</view>
+    <view class="snap-hint" wx:if="{{tideSnapped && !showSearch}}">⚓ 已就近吸附到海岸监测点：{{tideSnapName}}（距您{{tideSnapDist}}）</view>
+  </view>
+
+  <!-- 日期选择 -->
+  <view class="date-tabs card">
+    <scroll-view scroll-x class="date-scroll">
+      <view
+        class="date-tab {{item.date === selectedDate ? 'date-tab-active' : ''}}"
+        wx:for="{{dates}}"
+        wx:key="date"
+        bindtap="selectDate"
+        data-date="{{item.date}}"
+      >
+        <text class="date-tab-day">{{item.weekDay}}</text>
+        <text class="date-tab-date">{{item.displayDate}}</text>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading-wrap" wx:if="{{loading}}">
+    <view class="loading-icon"></view>
+    <text>加载中...</text>
+  </view>
+
+  <!-- 错误状态 + 重试 -->
+  <view class="state-card" wx:if="{{error}}">
+    <view class="state-icon">⚠️</view>
+    <view class="state-title">潮汐加载失败</view>
+    <view class="state-desc">{{errorMsg || '网络异常，请检查网络后重试'}}</view>
+    <view class="retry-btn" bindtap="retryFetchTide" hover-class="retry-btn-hover">重新加载</view>
+  </view>
+
+  <!-- 潮汐概览 -->
+  <view class="card" wx:if="{{!loading && tideTable.length > 0}}">
+    <view class="card-title">潮汐概览</view>
+    <view class="tide-summary">
+      <view class="tide-summary-item" wx:for="{{tideTable}}" wx:key="fxTime">
+        <view class="tide-type-tag {{item.type === 'H' ? 'tag-blue' : 'tag-orange'}}">
+          {{item.type === 'H' ? '满潮' : '干潮'}}
+        </view>
+        <text class="tide-time">{{item.timeStr}}</text>
+        <text class="tide-height">{{item.height}}m</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 24小时潮汐图表 -->
+  <view class="card" wx:if="{{!loading && tideHourly.length > 0}}">
+    <view class="card-title">24小时潮汐变化</view>
+    <view class="tide-chart">
+      <view class="chart-y-axis">
+        <text wx:for="{{yAxisLabels}}" wx:key="*this" class="y-label">{{item}}</text>
+      </view>
+      <scroll-view class="chart-area" scroll-x enable-flex scroll-with-animation scroll-into-view="{{nowScrollId}}">
+        <view
+          class="chart-bar-wrap {{item.isNow ? 'chart-bar-now' : ''}}"
+          id="bar-{{item.hour}}"
+          wx:for="{{tideHourly}}"
+          wx:key="fxTime"
+          style="height: {{chartMaxHeight}}rpx;"
+        >
+          <view wx:if="{{item.isNow}}" class="now-dot"></view>
+          <view class="chart-bar" style="height: {{item.barHeight}}rpx; background: {{item.isNow ? '#FA8C16' : (item.type === 'H' ? '#1677FF' : '#91CAFF')}};">
+          </view>
+          <text class="chart-time {{item.isNow ? 'chart-time-now' : ''}}">{{item.isNow ? '现在' : item.hour}}</text>
+        </view>
+      </scroll-view>
+    </view>
+    <!-- 图例 -->
+    <view class="chart-legend">
+      <view class="legend-item">
+        <view class="legend-dot legend-high"></view>
+        <text>满潮</text>
+      </view>
+      <view class="legend-item">
+        <view class="legend-dot legend-low"></view>
+        <text>干潮</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 小时详情列表 -->
+  <view class="card" wx:if="{{!loading && tideHourly.length > 0}}">
+    <view class="card-title">逐时潮高</view>
+    <view class="hourly-list">
+      <view class="hourly-item flex-between {{item.isNow ? 'hourly-item-now' : ''}}" wx:for="{{tideHourly}}" wx:key="fxTime">
+        <text class="hourly-time {{item.isNow ? 'hourly-time-now' : ''}}">{{item.isNow ? '现在' : item.hour + ':00'}}</text>
+        <view class="hourly-bar-wrap">
+          <view class="hourly-bar" style="width: {{item.barPercent}}%; background: {{item.isNow ? '#FA8C16' : (item.type === 'H' ? '#1677FF' : '#91CAFF')}};"></view>
+        </view>
+        <text class="hourly-height">{{item.height}}m</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!loading && !error && tideTable.length === 0}}">
+    <text class="empty-icon">🌊</text>
+    <text class="empty-text">暂无潮汐数据</text>
+    <text class="empty-hint text-sm text-muted">请尝试切换港口或日期</text>
+  </view>
+
+  <!-- 选点弹层：最近 + 按省份二级展开 -->
+  <view class="station-picker" wx:if="{{stationPickerShow}}">
+    <view class="sp-mask" bindtap="closeStationPicker"></view>
+    <view class="sp-panel">
+      <view class="sp-header">
+        <text class="sp-title">选择海岸监测点</text>
+        <text class="sp-close" bindtap="closeStationPicker">✕</text>
+      </view>
+
+      <!-- 搜索城市（沿用现有逻辑，选内陆城市会自动吸附到最近海岸） -->
+      <view class="sp-search">
+        <input class="sp-search-input" placeholder="搜索城市 / 港口" value="{{searchKeyword}}" bindinput="onSearchInput" focus="{{true}}" confirm-type="search" />
+        <text class="sp-search-cancel" bindtap="closeStationPicker">取消</text>
+      </view>
+      <view class="sp-search-result" wx:if="{{searchResults.length > 0}}">
+        <view class="sp-item" wx:for="{{searchResults}}" wx:key="name" data-index="{{index}}" bindtap="selectLocation">
+          <text class="sp-item-name">{{item.name}}</text>
+          <text class="sp-item-sub text-sm text-muted">{{item.adm}}</text>
+        </view>
+      </view>
+      <view class="sp-search-empty text-sm" wx:if="{{searchKeyword && searchResults.length === 0}}">未找到相关地点</view>
+
+      <scroll-view class="sp-scroll" scroll-y scroll-into-view="{{provinceScrollTo}}">
+        <!-- 最近：按距离升序的前若干个 -->
+        <view class="sp-section-title">📍 离您最近</view>
+        <view class="sp-item" wx:for="{{nearestStations}}" wx:key="name"
+              data-name="{{item.name}}" data-lat="{{item.lat}}" data-lon="{{item.lon}}" bindtap="selectStation">
+          <text class="sp-item-name">{{item.name}}</text>
+          <text class="sp-item-dist">{{item.distanceText}}</text>
+        </view>
+
+        <!-- 按省份：折叠行点开显示该省所有点位（含距离），默认不展开 -->
+        <view class="sp-section-title">🗺️ 全国地区</view>
+        <view class="sp-prov" wx:for="{{provinceGroups}}" wx:key="province" wx:for-item="grp" id="prov-{{index}}">
+          <view class="sp-prov-head" data-province="{{grp.province}}" bindtap="toggleProvince">
+            <text class="sp-prov-name">{{grp.province}}</text>
+            <text class="sp-prov-dist">{{grp.stations[0].distanceText}}</text>
+            <text class="sp-prov-arrow">{{expandedProvince === grp.province ? '▾' : '▸'}}</text>
+          </view>
+          <view class="sp-prov-body" wx:if="{{expandedProvince === grp.province}}">
+            <view class="sp-item sp-item-sub2" wx:for="{{grp.stations}}" wx:key="name" wx:for-item="st"
+                  data-name="{{st.name}}" data-lat="{{st.lat}}" data-lon="{{st.lon}}" bindtap="selectStation">
+              <text class="sp-item-name">{{st.name}}</text>
+              <text class="sp-item-dist">{{st.distanceText}}</text>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+
+      <!-- 快速索引侧栏（右侧）：点击定位并展开对应省份 -->
+      <view class="sp-index">
+        <text
+          class="sp-index-item {{expandedProvince === item.province ? 'sp-index-active' : ''}}"
+          wx:for="{{provinceIndex}}"
+          wx:key="province"
+          data-province="{{item.province}}"
+          bindtap="onIndexTap"
+        >{{item.label}}</text>
+      </view>
+    </view>
+  </view>
+</view>
