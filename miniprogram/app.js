@@ -50,8 +50,12 @@ App({
       this.globalData.tideLocation = tideLocation;
     }
 
-    // 隐私授权弹窗由页面挂载的 <privacy-popup> 组件接管（wx.onNeedPrivacyAuthorization），
-    // 这里不再手动处理，避免两套弹窗机制冲突。getLocation 只管调用，未授权时框架会回调组件弹窗。
+    // 隐私授权：app.json 已开启 __usePrivacyCheck__:true。
+    // 关键：不要在此注册 wx.onNeedPrivacyAuthorization。在 __usePrivacyCheck__:true 下，框架会在
+    // 调用 getLocation 等隐私接口且未授权时【自动弹出系统隐私窗】，用户点「同意」即被框架记录并自动重试原接口。
+    // 若在此注册 onNeedPrivacyAuthorization 并在回调里调 wx.requirePrivacyAuthorize，该基础库版本会
+    // 再次触发 onNeedPrivacyAuthorization，造成「Maximum call stack size exceeded」无限递归崩溃。
+    // 原自定义 privacy-popup 组件已删除，隐私授权完全交由框架系统窗接管（已验证可正常弹窗且不崩溃）。
   },
 
   // 平台检测：优先使用细分 API，避免 getSystemInfo 弃用告警；harmony 用于后续 HarmonyOS 兼容
@@ -73,8 +77,7 @@ App({
     }
   },
 
-  // 获取定位（隐私授权交由页面 <privacy-popup> 组件通过 wx.onNeedPrivacyAuthorization 接管；
-  // 这里只管调用，未授权时框架会回调组件弹出授权窗，用户同意则自动重试本接口）
+  // 获取定位（隐私授权由微信框架在 __usePrivacyCheck__:true 下自动弹系统窗接管，无需手动处理）
   async getLocation() {
     return new Promise((resolve, reject) => {
       wx.getLocation({

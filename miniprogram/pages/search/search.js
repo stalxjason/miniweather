@@ -54,8 +54,12 @@ Page({
     const keyword = e.detail.value;
     this.setData({ keyword });
 
+    // 300ms 防抖：避免每敲一个字符就打一次云函数/和风接口（省每日配额）
+    if (this._timer) clearTimeout(this._timer);
     if (keyword.trim().length > 0) {
-      this.doSearch(keyword.trim());
+      this._timer = setTimeout(() => {
+        this.doSearch(keyword.trim());
+      }, 300);
     } else {
       this.setData({ results: [] });
     }
@@ -83,11 +87,14 @@ Page({
   },
 
   selectCity(e) {
+    // 手动选城市：清空启动时的 GPS 精确坐标，潮汐页改跟随所选城市（否则仍按旧定位取数）
+    getApp().globalData.currentLocation = null;
     const city = this.data.results[e.currentTarget.dataset.index];
     this.saveAndGoBack(city);
   },
 
   selectHotCity(e) {
+    getApp().globalData.currentLocation = null; // 同上：手动选点后不再跟随 GPS
     // wxml data-* 属性值一律字符串，这里统一转 number（约定 lat/lon 为 number）
     const { id, name } = e.currentTarget.dataset;
     const lat = Number(e.currentTarget.dataset.lat);
@@ -106,10 +113,10 @@ Page({
     } catch (err) {
       wx.hideLoading();
       const errMsg = (err && err.errMsg) || '';
-      if (err && err.errno === 112) {
-        wx.showToast({ title: '请在小程序后台「隐私保护指引」开启位置信息', icon: 'none' });
-      } else if (/privacy/.test(errMsg)) {
-        wx.showToast({ title: '请先同意隐私协议以使用定位', icon: 'none' });
+      if (err && (err.errno === 112 || err.errno === 104)) {
+        wx.showToast({ title: '请在弹窗中点「同意」以使用定位', icon: 'none' });
+      } else if (/privacy|not authorized|buttonId/.test(errMsg)) {
+        wx.showToast({ title: '请在弹窗中点「同意」以使用定位', icon: 'none' });
       } else {
         wx.showToast({ title: '定位失败，请检查定位权限', icon: 'none' });
       }
@@ -161,7 +168,12 @@ Page({
   },
 
   clearInput() {
+    if (this._timer) { clearTimeout(this._timer); this._timer = null; }
     this.setData({ keyword: '', results: [] });
+  },
+
+  onUnload() {
+    if (this._timer) { clearTimeout(this._timer); this._timer = null; }
   },
 
   goBack() {

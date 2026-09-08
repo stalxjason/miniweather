@@ -69,6 +69,4 @@
     <text class="empty-text">未找到相关城市</text>
   </view>
 
-  <!-- 隐私授权弹窗（定位等隐私接口触发） -->
-  <privacy-popup />
 </view>

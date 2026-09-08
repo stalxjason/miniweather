@@ -13,14 +13,16 @@ const _requestCache = new Map();
 function _cacheKey(host, path, params) {
   return `${host}${path}|${JSON.stringify(params)}`;
 }
-function _getCache(key, ttl = CACHE_TTL) {
+function _getCache(key, ttl) {
   const hit = _requestCache.get(key);
-  if (hit && Date.now() - hit.time < ttl) return hit.data;
+  // 优先用传入 ttl；否则用写入缓存时携带的 ttl；再否则默认 CACHE_TTL
+  const eff = (ttl != null) ? ttl : (hit && hit.ttl != null ? hit.ttl : CACHE_TTL);
+  if (hit && Date.now() - hit.time < eff) return hit.data;
   if (hit) _requestCache.delete(key);
   return null;
 }
-function _setCache(key, data) {
-  _requestCache.set(key, { time: Date.now(), data });
+function _setCache(key, data, ttl = CACHE_TTL) {
+  _requestCache.set(key, { time: Date.now(), data, ttl });
 }
 
 // 和风错误码 -> 友好提示（详见 https://dev.qweather.com/docs/resource/status-code/）
@@ -184,6 +186,17 @@ const getMinutely5m = (lon, lat) => {
 };
 
 /**
+ * 获取实时天气预警（大风/暴雨/高温等，免费接口）
+ * @param {string} locationId 城市 LocationID
+ */
+const getWarningNow = (locationId) => {
+  return request('/v7/warning/now', {
+    location: locationId,
+    lang: 'zh'
+  });
+};
+
+/**
  * 通过经纬度获取潮汐数据 —— 改用 Open-Meteo Marine API
  * 优点：免费、无需 key、全球任意坐标覆盖（不依赖和风潮汐站，解决了上海/天津等站无数据的问题）
  * 返回逐小时海平面高度（含潮汐信号），高/低潮由 tide.js 本地 extractExtremes 提取。
@@ -194,7 +207,8 @@ const getMinutely5m = (lon, lat) => {
  */
 const MARINE_HOST = 'https://marine-api.open-meteo.com';
 
-// 单次 Open-Meteo 海洋请求（返回 {times, heights}），失败 reject
+// 单次 Open-Meteo 海洋请求（返回 {times, heights, utcOffsetSeconds}），失败 reject
+// utcOffsetSeconds：站点时区相对 UTC 的偏移（Open-Meteo timezone=auto 返回），供前端换算“当地当前小时”
 function requestMarine(lat, lon, start, end) {
   const url = `${MARINE_HOST}/v1/marine?latitude=${lat}&longitude=${lon}` +
     `&hourly=sea_level_height_msl&timezone=auto&start_date=${start}&end_date=${end}`;
@@ -205,7 +219,8 @@ function requestMarine(lat, lon, start, end) {
         if (res.statusCode === 200 && res.data && res.data.hourly) {
           resolve({
             times: res.data.hourly.time || [],
-            heights: res.data.hourly.sea_level_height_msl || []
+            heights: res.data.hourly.sea_level_height_msl || [],
+            utcOffsetSeconds: res.data.utc_offset_seconds
           });
         } else {
           const reason = (res.data && res.data.reason) || `HTTP ${res.statusCode}`;
@@ -270,20 +285,24 @@ const getTideByCoord = async (lat, lon, date) => {
   }
 
   // 2) 海岸吸附：螺旋搜索最近的有数据海岸点（内陆坐标自动吸附到最近海岸）
-  //    步长由小到大、8 方向；命中即返回。沿海/近内陆用户通常 1~2 层内命中。
+  //    步长由小到大、8 方向同层并行请求（串行最坏 32 次会等太久）；命中即返回。
+  //    沿海/近内陆用户通常 1~2 层内命中。
   const steps = [0.5, 1.0, 2.0, 3.0];
   const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]];
   for (const step of steps) {
-    for (const [dx, dy] of dirs) {
-      const nla = +(la + dy * step).toFixed(3);
-      const nlo = +(lo + dx * step).toFixed(3);
-      if (nla < -90 || nla > 90 || nlo < -180 || nlo > 180) continue;
-      const r = await requestMarine(nla, nlo, start, end).catch(() => null);
-      if (r && _hasTide(r)) {
-        const snapped = { ...r, usedLat: nla, usedLon: nlo, snapped: true };
-        _setCache(tideKey, snapped);
-        return snapped;
-      }
+    const candidates = dirs
+      .map(([dx, dy]) => ({
+        la: +(la + dy * step).toFixed(3),
+        lo: +(lo + dx * step).toFixed(3)
+      }))
+      .filter(c => c.la >= -90 && c.la <= 90 && c.lo >= -180 && c.lo <= 180);
+    const results = await Promise.all(
+      candidates.map(c => requestMarine(c.la, c.lo, start, end).then(r => (r && _hasTide(r)) ? { ...r, usedLat: c.la, usedLon: c.lo, snapped: true } : null).catch(() => null))
+    );
+    const hit = results.find(Boolean);
+    if (hit) {
+      _setCache(tideKey, hit);
+      return hit;
     }
   }
 
@@ -299,7 +318,7 @@ const getTideByCoord = async (lat, lon, date) => {
  */
 const callTyphoon = (action, id) => {
   const key = `typhoon|${action}|${id || ''}`;
-  const cached = _getCache(key, 300); // 5 分钟缓存，避免频繁打 NMC
+  const cached = _getCache(key, 300000); // 5 分钟缓存，避免频繁打 NMC
   if (cached) return Promise.resolve(cached);
 
   return new Promise((resolve, reject) => {
@@ -309,7 +328,7 @@ const callTyphoon = (action, id) => {
       success: (res) => {
         const data = res.result;
         if (data && data.code === 'OK') {
-          _setCache(key, data, 300);
+          _setCache(key, data, 300000);
           resolve(data);
         } else if (data && data.error) {
           const msg = (data.error.errorMessage || JSON.stringify(data.error) || '未知云函数错误').slice(0, 240);
@@ -343,6 +362,7 @@ module.exports = {
   getWeather24h,
   getIndices,
   getAirNow,
+  getWarningNow,
   getMinutely5m,
   getTideByCoord,
   getTyphoonList,

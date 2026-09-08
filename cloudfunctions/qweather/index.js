@@ -50,11 +50,13 @@ const GEO_HOSTS = [
   'https://geoapi.qweather.com'
 ];
 
-// path 白名单：仅放行下列和风合法端点（防止代理被滥用为请求任意/付费端点的跳板）
+// path 白名单：仅放行免费订阅内、且前端实际调用的端点（收费项如 72h 逐时/指数 1h/15d/air 5d 一律不放行，
+// 防止代理被滥用为请求任意/付费端点的跳板）
 const ALLOWED_PATHS = [
-  /^v7\/weather\/(now|7d|24h|72h)$/,
-  /^v7\/indices\/(1d|1h|15d)$/,
-  /^v7\/air\/(now|5d)$/,
+  /^v7\/weather\/(now|7d|24h)$/,
+  /^v7\/indices\/1d$/,
+  /^v7\/air\/now$/,
+  /^v7\/warning\/now$/,
   /^v7\/minutely\/5m$/,
   /^geo\/v2\/city\/lookup$/
 ];

@@ -1,100 +1,130 @@
 /* pages/tide/tide.wxss */
 
+/* 顶部沉浸式海岸点头部 */
 .tide-hero {
-  background: linear-gradient(135deg, #0D4E8C 0%, #1677FF 50%, #4096FF 100%);
-  padding: 30rpx 40rpx;
+  background: linear-gradient(135deg, #0A3A6B 0%, #1677FF 60%, #36CFC9 100%);
+  padding: 24rpx 32rpx 28rpx;
   color: #FFFFFF;
+  position: relative;
+  overflow: hidden;
 }
 
-.tide-hero-title {
-  font-size: 40rpx;
-  font-weight: 700;
-  margin-bottom: 10rpx;
+/* 装饰性底层微光晕 */
+.tide-hero::after {
+  content: '';
+  position: absolute;
+  right: -50rpx;
+  top: -50rpx;
+  width: 220rpx;
+  height: 220rpx;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
-.station-info {
+.hero-station-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10rpx 0;
+  gap: 20rpx;
+}
+
+.station-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.station-name-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.station-icon {
+  font-size: 34rpx;
+  flex-shrink: 0;
 }
 
 .station-name {
-  font-size: 30rpx;
-  font-weight: 500;
+  font-size: 38rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: 1rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.follow-hint {
-  font-size: 22rpx;
-  color: rgba(255, 255, 255, 0.7);
-  padding: 6rpx 0 2rpx;
-}
-
-/* 海岸吸附提示：当前坐标无潮汐数据时自动吸附到最近海岸监测点 */
-.snap-hint {
-  font-size: 22rpx;
-  color: #FFE58F;
-  background: rgba(255, 169, 64, 0.15);
-  border-radius: 8rpx;
-  padding: 8rpx 12rpx;
-  margin-top: 8rpx;
-}
-
-/* 地点搜索 */
-.tide-search {
+.station-tags {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 10rpx;
   margin-top: 10rpx;
 }
 
-.tide-search-input {
-  flex: 1;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 30rpx;
-  padding: 14rpx 28rpx;
-  font-size: 28rpx;
-  color: #333;
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 20rpx;
+  font-size: 21rpx;
+  line-height: 1.2;
+  backdrop-filter: blur(8px);
 }
 
-.tide-search-cancel {
-  margin-left: 20rpx;
-  font-size: 28rpx;
-  color: rgba(255, 255, 255, 0.85);
+.chip-location {
+  background: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.95);
+  border: 1rpx solid rgba(255, 255, 255, 0.25);
 }
 
-.tide-search-result {
-  margin-top: 16rpx;
-  background: rgba(255, 255, 255, 0.97);
-  border-radius: 16rpx;
-  overflow: hidden;
-  max-height: 420rpx;
+.chip-custom {
+  background: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.95);
+  border: 1rpx solid rgba(255, 255, 255, 0.25);
 }
 
-.tide-search-item {
+.chip-snap {
+  background: rgba(255, 214, 102, 0.22);
+  color: #FFE58F;
+  border: 1rpx solid rgba(255, 214, 102, 0.4);
+}
+
+.chip-icon {
+  font-size: 20rpx;
+}
+
+/* 切换地点胶囊按钮 */
+.switch-station-btn {
   display: flex;
-  flex-direction: column;
-  padding: 20rpx 28rpx;
-  border-bottom: 1rpx solid #F0F0F0;
+  align-items: center;
+  gap: 6rpx;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1rpx solid rgba(255, 255, 255, 0.35);
+  padding: 12rpx 22rpx;
+  border-radius: 30rpx;
+  flex-shrink: 0;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
 }
 
-.tide-search-item:last-child {
-  border-bottom: none;
+.switch-station-btn:active {
+  background: rgba(255, 255, 255, 0.35);
+  transform: scale(0.96);
 }
 
-.tsi-name {
-  font-size: 30rpx;
-  color: #333;
+.switch-btn-text {
+  font-size: 24rpx;
   font-weight: 500;
+  color: #FFFFFF;
 }
 
-.tsi-adm {
-  color: #999;
-  margin-top: 4rpx;
-}
-
-.tide-search-empty {
-  margin-top: 16rpx;
-  color: rgba(255, 255, 255, 0.8);
+.switch-btn-arrow {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.85);
+  margin-left: 2rpx;
 }
 
 /* 日期选择 */
@@ -112,11 +142,14 @@
 .date-tab {
   display: inline-block;
   text-align: center;
-  padding: 16rpx 30rpx;
+  padding: 14rpx 20rpx;
+  min-width: 136rpx;
+  box-sizing: border-box;
   border-radius: 16rpx;
-  margin-right: 16rpx;
+  margin-right: 14rpx;
   background: #F5F7FA;
   transition: all 0.2s;
+  vertical-align: top;
 }
 
 .date-tab-active {
@@ -127,7 +160,8 @@
 .date-tab-day {
   display: block;
   font-size: 26rpx;
-  font-weight: 500;
+  font-weight: 600;
+  color: #333333;
 }
 
 .date-tab-active .date-tab-day {
@@ -136,147 +170,213 @@
 
 .date-tab-date {
   display: block;
-  font-size: 22rpx;
-  color: #999;
-  margin-top: 4rpx;
+  font-size: 21rpx;
+  color: #8C8C8C;
+  margin-top: 2rpx;
 }
 
 .date-tab-active .date-tab-date {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.82);
 }
 
-/* 潮汐概览 */
-.tide-summary {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-around;
+/* 日期滑块潮水等级与活汛/死汛微标 */
+.date-tab-tide {
+  margin-top: 8rpx;
+  font-size: 19rpx;
+  padding: 2rpx 8rpx;
+  border-radius: 6rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
 }
 
-.tide-summary-item {
-  text-align: center;
-  padding: 20rpx 30rpx;
-  min-width: 150rpx;
+.tide-badge-sep {
+  margin: 0 2rpx;
 }
 
-.tide-type-tag {
-  display: inline-block;
-  padding: 6rpx 20rpx;
-  border-radius: 20rpx;
-  font-size: 24rpx;
+.tide-giant {
+  background: #FFF0F6;
+  color: #EB2F96;
   font-weight: 600;
-  margin-bottom: 10rpx;
 }
 
-.tide-time {
-  display: block;
-  font-size: 32rpx;
+.tide-big {
+  background: #E6F4FF;
+  color: #1677FF;
+  font-weight: 600;
+}
+
+.tide-mid {
+  background: #E6FFFB;
+  color: #00A389;
+  font-weight: 500;
+}
+
+.tide-small {
+  background: #F0F0F0;
+  color: #8C8C8C;
+  font-weight: 500;
+}
+
+.date-tab-active .date-tab-tide {
+  background: rgba(255, 255, 255, 0.22);
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+/* 潮汐概览（紧凑卡片） */
+.tide-overview-card {
+  padding: 20rpx 24rpx;
+}
+
+.overview-header {
+  margin-bottom: 16rpx;
+}
+
+.overview-tip {
+  font-size: 22rpx;
+}
+
+.tide-summary-grid {
+  display: flex;
+  gap: 14rpx;
+}
+
+.tide-summary-cell {
+  flex: 1;
+  min-width: 0;
+  background: #F8FAFD;
+  border-radius: 12rpx;
+  padding: 14rpx 10rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1rpx solid rgba(22, 119, 255, 0.08);
+}
+
+.cell-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  width: 100%;
+}
+
+.cell-badge {
+  font-size: 20rpx;
+  font-weight: 600;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  line-height: 1.3;
+}
+
+.badge-high {
+  background: #E6F4FF;
+  color: #1677FF;
+}
+
+.badge-low {
+  background: #E6FFFB;
+  color: #00A389;
+}
+
+.cell-time {
+  font-size: 26rpx;
   font-weight: 700;
-  color: #333;
+  color: #262626;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.tide-height {
-  display: block;
-  font-size: 28rpx;
-  color: #666;
-  margin-top: 4rpx;
+.cell-val {
+  margin-top: 6rpx;
+  display: flex;
+  align-items: baseline;
 }
 
-/* 潮汐图表 */
+.cell-num {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #595959;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.cell-unit {
+  font-size: 20rpx;
+  color: #8C8C8C;
+  margin-left: 2rpx;
+}
+
+/* 潮汐曲线图表 */
 .tide-chart {
   display: flex;
-  margin-top: 10rpx;
+  margin-top: 14rpx;
+  position: relative;
 }
 
 .chart-y-axis {
+  width: 72rpx;
+  height: 180px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding-right: 10rpx;
-  padding-bottom: 30rpx;
+  align-items: flex-end;
+  padding-top: 28px;
+  padding-bottom: 26px;
+  padding-right: 12rpx;
+  flex-shrink: 0;
 }
 
 .y-label {
-  font-size: 22rpx;
-  color: #999;
+  font-size: 20rpx;
+  color: #8C8C8C;
   line-height: 1;
 }
 
 .chart-area {
   flex: 1;
-  display: flex;
-  align-items: flex-end;
-  overflow-x: auto;
-  padding-bottom: 30rpx;
+  height: 180px;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
-.chart-bar-wrap {
-  flex: 1;
-  min-width: 30rpx;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-.chart-bar {
-  width: 60%;
-  border-radius: 4rpx 4rpx 0 0;
-  min-height: 4rpx;
-  transition: height 0.3s;
-}
-
-/* 当前时间柱：橙色高亮 + 顶部“现在”圆点 + 轻微光晕 */
-.chart-bar-wrap {
+.chart-inner {
   position: relative;
+  height: 180px;
 }
 
-.chart-bar-now .chart-bar {
-  box-shadow: 0 0 12rpx rgba(250, 140, 22, 0.7);
+.tide-curve-img {
+  display: block;
 }
 
-.now-dot {
+/* 离屏绘图缓冲画布 */
+.canvas-buffer {
   position: absolute;
-  top: -14rpx;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 12rpx;
-  height: 12rpx;
-  border-radius: 50%;
-  background: #FA8C16;
-  box-shadow: 0 0 8rpx rgba(250, 140, 22, 0.8);
-}
-
-.chart-time {
-  font-size: 22rpx;
-  color: #999;
-  margin-top: 6rpx;
-  writing-mode: horizontal-tb;
-}
-
-.chart-time-now {
-  color: #FA8C16;
-  font-weight: 700;
-  font-size: 22rpx;
+  left: -3000px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .chart-legend {
   display: flex;
   justify-content: center;
+  align-items: center;
   margin-top: 20rpx;
-  gap: 40rpx;
+  gap: 36rpx;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  font-size: 24rpx;
+  font-size: 22rpx;
   color: #666;
 }
 
 .legend-dot {
-  width: 16rpx;
-  height: 16rpx;
-  border-radius: 4rpx;
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
   margin-right: 8rpx;
 }
 
@@ -285,61 +385,155 @@
 }
 
 .legend-low {
-  background: #91CAFF;
+  background: #00A389;
 }
 
-/* 小时列表 */
-.hourly-list {
-  max-height: 600rpx;
-  overflow-y: auto;
+.legend-now {
+  background: #FA8C16;
 }
 
-.hourly-item {
+/* 海洋实用指南 Tips */
+.tips-card {
+  padding: 24rpx;
+}
+
+.tips-tabs {
+  display: flex;
+  background: #F0F2F5;
+  border-radius: 16rpx;
+  padding: 6rpx;
+  margin-top: 16rpx;
+  margin-bottom: 20rpx;
+  gap: 6rpx;
+}
+
+.tips-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
   padding: 14rpx 0;
-  border-bottom: 1rpx solid #F5F5F5;
-}
-
-.hourly-item:last-child {
-  border-bottom: none;
-}
-
-.hourly-time {
-  width: 80rpx;
-  font-size: 26rpx;
-  color: #555;
-}
-
-.hourly-item-now {
-  background: #FFF7E6;
   border-radius: 12rpx;
+  transition: all 0.25s ease;
 }
 
-.hourly-time-now {
-  color: #FA8C16;
+.tips-tab-icon {
+  font-size: 26rpx;
+}
+
+.tips-tab-text {
+  font-size: 24rpx;
+  color: #595959;
+  font-weight: 500;
+}
+
+.tips-tab-active {
+  background: #FFFFFF;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+}
+
+.tips-tab-active .tips-tab-text {
+  color: #1677FF;
   font-weight: 700;
 }
 
-.hourly-bar-wrap {
+.tips-content {
+  animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tip-section {
+  margin-bottom: 18rpx;
+}
+
+.tip-section-title {
+  font-size: 25rpx;
+  font-weight: 700;
+  color: #262626;
+  margin-bottom: 12rpx;
+  display: flex;
+  align-items: center;
+}
+
+.tip-dot {
+  color: #1677FF;
+  font-size: 16rpx;
+  margin-right: 10rpx;
+}
+
+.tip-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 12rpx;
+  line-height: 1.5;
+}
+
+.tip-tag {
+  font-size: 20rpx;
+  font-weight: 600;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  flex-shrink: 0;
+  margin-right: 12rpx;
+  margin-top: 4rpx;
+}
+
+.tag-orange {
+  background: #FFF7E6;
+  color: #FA8C16;
+}
+
+.tag-blue {
+  background: #E6F4FF;
+  color: #1677FF;
+}
+
+.tag-green {
+  background: #F6FFED;
+  color: #52C41A;
+}
+
+.tip-desc {
+  font-size: 24rpx;
+  color: #595959;
   flex: 1;
-  height: 8rpx;
-  background: #F0F0F0;
-  border-radius: 4rpx;
-  margin: 0 20rpx;
-  overflow: hidden;
 }
 
-.hourly-bar {
-  height: 100%;
-  border-radius: 4rpx;
-  transition: width 0.3s;
+.tip-highlight {
+  color: #FA8C16;
+  font-weight: 600;
 }
 
-.hourly-height {
-  width: 80rpx;
-  text-align: right;
-  font-size: 26rpx;
-  font-weight: 500;
-  color: #333;
+.tip-bold {
+  color: #262626;
+  font-weight: 600;
+}
+
+/* 安全警告警示框 */
+.tip-warning-box {
+  background: #FFFBE6;
+  border: 1rpx solid #FFE58F;
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+  margin-top: 10rpx;
+}
+
+.warning-title {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #D46B08;
+  margin-bottom: 6rpx;
+}
+
+.warning-desc {
+  font-size: 22rpx;
+  color: #873800;
+  line-height: 1.5;
 }
 
 /* 空状态 */

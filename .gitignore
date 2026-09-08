@@ -12,3 +12,9 @@ $RECYCLE.BIN/
 
 # Node.js
 node_modules/
+
+# 微信开发者工具个人本地配置（不应入库）
+project.private.config.json
+
+# ZCode 运行时目录
+.zcode/

@@ -172,6 +172,83 @@ const cityDisplayName = (loc) => {
   return loc.name || loc.adm2 || loc.adm1 || '';
 };
 
+/**
+ * 根据日期计算农历日（1~30）
+ * 基于天文合朔基准点与 29.530588853 天精准朔望月周期推算
+ * @param {Date|string} date
+ * @returns {number} 1~30（初一为1，十五为15，廿三为23等）
+ */
+const getLunarDay = (date) => {
+  const dt = (typeof date === 'string') ? new Date(date.replace(/-/g, '/')) : new Date(date);
+  // 参考合朔时间：2024年2月10日 06:59:00 UTC（农历甲辰年正月初一）
+  const refTime = 1707548340000;
+  const synodicMs = 29.530588853 * 86400000;
+  const diff = dt.getTime() - refTime;
+  let phase = (diff % synodicMs) / synodicMs;
+  if (phase < 0) phase += 1;
+  const day = Math.floor(phase * 29.530588853) + 1;
+  return Math.min(30, Math.max(1, day));
+};
+
+/**
+ * 依据农历日（及可选的实测日潮差）判定潮水大小级别与活汛/死汛
+ * 映射规则：
+ *  - 巨潮：全月潮差峰值（农历初三、十八，潮龄滞后日月引力顶峰）
+ *  - 大潮：朔望大潮（农历初一、初二、初四、初五、十四、十五、十六、十七、十九、二十）
+ *  - 中潮：转折与过渡（农历初六、初七、十三、廿一、廿二、廿八为活汛；十二、廿七为死汛转折）
+ *  - 小潮：上下弦引潮力消减（农历初八至十一、廿三至廿六为死汛）
+ * @param {Date|string} date 日期
+ * @param {number} [dailyRange] 实测日潮差（米）
+ * @returns {{tideLevel: string, tideXun: string, tideText: string, tideClass: string, lunarDay: number}}
+ */
+const calcTideStatus = (date, dailyRange) => {
+  const lDay = getLunarDay(date);
+  // 15 天半月周期对称归一 (1~15)
+  const normDay = ((lDay - 1) % 15) + 1;
+
+  let tideLevel = '中潮';
+  let tideXun = '活汛';
+  let tideClass = 'tide-mid';
+
+  if (normDay === 3) {
+    tideLevel = '巨潮';
+    tideXun = '活汛';
+    tideClass = 'tide-giant';
+  } else if (normDay === 1 || normDay === 2 || normDay === 4 || normDay === 5 || normDay === 14 || normDay === 15) {
+    tideLevel = '大潮';
+    tideXun = '活汛';
+    tideClass = 'tide-big';
+  } else if (normDay === 6 || normDay === 7 || normDay === 13) {
+    tideLevel = '中潮';
+    tideXun = '活汛';
+    tideClass = 'tide-mid';
+  } else if (normDay === 12) {
+    tideLevel = '中潮';
+    tideXun = '死汛';
+    tideClass = 'tide-mid';
+  } else {
+    tideLevel = '小潮';
+    tideXun = '死汛';
+    tideClass = 'tide-small';
+  }
+
+  // 若提供实测日潮差，结合极端水文微调
+  if (typeof dailyRange === 'number' && dailyRange > 0) {
+    if (dailyRange >= 3.8 && tideLevel === '大潮') {
+      tideLevel = '巨潮';
+      tideClass = 'tide-giant';
+    }
+  }
+
+  return {
+    tideLevel,
+    tideXun,
+    tideText: `${tideLevel}·${tideXun}`,
+    tideClass,
+    lunarDay: lDay
+  };
+};
+
 module.exports = {
   formatDate,
   getTodayStr,
@@ -182,5 +259,7 @@ module.exports = {
   windScaleDesc,
   parseTime,
   formatUpdateTime,
-  cityDisplayName
+  cityDisplayName,
+  getLunarDay,
+  calcTideStatus
 };

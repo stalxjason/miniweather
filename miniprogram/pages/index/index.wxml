@@ -1,71 +1,89 @@
 <!-- pages/index/index.wxml - 天气首页（全屏动态天空） -->
 <view class="container">
-  <!-- 全屏天气动效层（固定背景） -->
-  <view class="weather-effect effect-{{now.effectType}}" wx:if="{{now.effectType}}">
-    <view class="weather-particles" wx:if="{{now.effectType === 'rain' || now.effectType === 'snow' || now.effectType === 'thunder'}}">
-      <view class="particle" wx:for="{{particles}}" wx:key="id" style="{{item.style}}"></view>
-    </view>
-    <view class="weather-clouds" wx:if="{{now.effectType === 'cloud' || now.effectType === 'fog'}}">
-      <view class="cloud" wx:for="{{clouds}}" wx:key="id" style="{{item.style}}"></view>
-    </view>
-    <view class="weather-sun" wx:if="{{now.effectType === 'sun'}}">
-      <view class="sun"></view>
-      <view class="sun-ray" wx:for="{{rays}}" wx:key="*this"></view>
-    </view>
-  </view>
+  <!-- 全屏自然天气天空氛围层（固定背景） -->
+  <view class="weather-effect effect-{{now.effectType || 'sun'}}"></view>
 
   <!-- 内容层（在动效之上滚动） -->
   <view class="content-layer">
-    <!-- 城市选择 -->
+    <!-- ===== Hero：城市 / 大字温度 / 天气+AQI / 指标 / 快讯卡 / 今明条 ===== -->
     <view class="hero-section {{heroTextClass}}">
       <view class="city-selector" bindtap="goToSearch">
+        <text class="city-pin">📍</text>
         <text class="city-name">{{city.name}}</text>
         <view class="city-arrow"></view>
       </view>
 
-      <!-- 实时天气（可点击查看全天） -->
-      <view class="now-card" bindtap="openHourlyDetail" wx:if="{{now}}">
-        <view class="now-weather">
-          <text class="now-temp">{{now.temp}}°</text>
-          <view class="now-info">
-            <text class="now-text">{{now.weatherText}}</text>
-            <text class="now-feels">体感 {{now.feelsLike}}°</text>
-          </view>
-          <image class="now-icon" src="{{now.weatherIcon}}" mode="aspectFit"></image>
-        </view>
-
-        <!-- 天气详情 -->
-        <view class="now-detail">
-          <view class="detail-item">
-            <text class="detail-label">💧 湿度</text>
-            <text class="detail-value">{{now.humidity}}%</text>
-          </view>
-          <view class="detail-item">
-            <text class="detail-label">🌬️ {{now.windDir}}</text>
-            <text class="detail-value">{{now.windScale}}级</text>
-          </view>
-          <view class="detail-item">
-            <text class="detail-label">👁️ 能见度</text>
-            <text class="detail-value">{{now.vis}}km</text>
-          </view>
-          <view class="detail-item">
-            <text class="detail-label">🌡️ 气压</text>
-            <text class="detail-value">{{now.pressure}}hPa</text>
+      <block wx:if="{{now}}">
+        <!-- 气象预警徽标 -->
+        <view class="hero-warning-row" wx:if="{{warning}}">
+          <view class="hero-warning" style="background:{{warning.color}};">
+            <text class="hero-warning-icon">⚠</text>
+            <text>{{warning.title}}</text>
           </view>
         </view>
 
-        <text class="now-card-hint">点击查看全天天气 ▾</text>
-      </view>
-    </view>
+        <!-- 大字温度 -->
+        <view class="hero-temp-row">
+          <text class="hero-temp">{{now.temp}}<text class="hero-temp-unit">°</text></text>
+        </view>
 
-    <!-- 分钟级降水（未来2小时） -->
-    <view class="card rain-card" wx:if="{{minutely}}">
-      <view class="card-title">未来2小时降水</view>
-      <text class="rain-summary">{{minutely.summary}}</text>
-      <view class="rain-bars" wx:if="{{minutely.bars.length > 0}}">
-        <view class="rain-bar {{item.type === 'snow' ? 'rain-bar-snow' : ''}}" wx:for="{{minutely.bars}}" wx:key="idx" style="height: {{item.pct}}rpx;"></view>
-      </view>
-      <text class="rain-tip text-sm text-muted" wx:if="{{minutely.bars.length === 0}}">暂无降水预报</text>
+        <!-- 天气文字 | AQI 徽标 -->
+        <view class="hero-cond">
+          <text class="hero-cond-text">{{now.weatherText}}</text>
+          <text class="hero-cond-sep" wx:if="{{air}}">｜</text>
+          <view class="hero-aqi" wx:if="{{air}}" style="background:{{air.color.bg}};">
+            <text style="color:{{air.color.fg}};">{{air.aqi}} {{air.category}}</text>
+          </view>
+        </view>
+
+        <!-- 关键指标行 -->
+        <view class="hero-metrics">
+          <text>体感 {{now.feelsLike}}°</text>
+          <text class="hero-metric-sep">·</text>
+          <text>{{now.windDir}}{{now.windScale ? ' ' + now.windScale + '级' : ' 微风'}}</text>
+          <text class="hero-metric-sep">·</text>
+          <text>湿度 {{now.humidity}}%</text>
+          <text class="hero-metric-sep">·</text>
+          <text>气压 {{now.pressure}}hPa</text>
+        </view>
+
+        <!-- 快讯卡：降水 / 台风（点击滚动到对应板块） -->
+        <view class="notice-row">
+          <view class="notice-card" wx:if="{{minutely}}" bindtap="scrollToSection" data-id="rainSection">
+            <text class="notice-text">{{minutely.summary || '暂无降水预报'}}</text>
+            <text class="notice-arrow">›</text>
+          </view>
+          <view class="notice-card" wx:if="{{typhoonNotice}}" bindtap="scrollToSection" data-id="typhoonSection">
+            <text class="notice-text">{{typhoonNotice}}</text>
+            <text class="notice-arrow">›</text>
+          </view>
+        </view>
+
+        <!-- 今明两条 -->
+        <view class="today-strip" wx:if="{{daily.length > 1}}">
+          <view class="today-cell">
+            <view class="today-head">
+              <text class="today-label">今天</text>
+              <text class="today-temp">{{daily[0].tempMax}}°/{{daily[0].tempMin}}°</text>
+            </view>
+            <view class="today-sub">
+              <text class="today-text">{{daily[0].textDay}}</text>
+              <image class="today-icon" src="{{daily[0].iconDay}}" mode="aspectFit"></image>
+            </view>
+          </view>
+          <view class="today-divider"></view>
+          <view class="today-cell">
+            <view class="today-head">
+              <text class="today-label">明天</text>
+              <text class="today-temp">{{daily[1].tempMax}}°/{{daily[1].tempMin}}°</text>
+            </view>
+            <view class="today-sub">
+              <text class="today-text">{{daily[1].textDay}}</text>
+              <image class="today-icon" src="{{daily[1].iconDay}}" mode="aspectFit"></image>
+            </view>
+          </view>
+        </view>
+      </block>
     </view>
 
     <!-- 加载状态 -->
@@ -82,75 +100,125 @@
       <view class="retry-btn" bindtap="retryFetch" hover-class="retry-btn-hover">重新加载</view>
     </view>
 
-    <!-- 7天预报 -->
-    <view class="card" wx:if="{{daily.length > 0}}">
-      <view class="card-title">7天预报</view>
-      <view class="forecast-list">
-        <view class="forecast-item" wx:for="{{daily}}" wx:key="fxDate">
-          <view class="forecast-date">
-            <text class="forecast-weekday">{{item.weekDay}}</text>
-            <text class="forecast-day text-sm text-muted">{{item.fxDate}}</text>
-          </view>
-          <image class="forecast-icon" src="{{item.iconDay}}" mode="aspectFit"></image>
-          <view class="forecast-text">{{item.textDay}}</view>
-          <view class="forecast-meta">
-            <view class="forecast-temp">
-              <text class="temp-max">{{item.tempMax}}°</text>
-              <text class="text-muted"> / </text>
-              <text class="temp-min">{{item.tempMin}}°</text>
+    <!-- ===== 分钟级降水（未来2小时，临近天气优先呈现） ===== -->
+    <view class="card rain-card" id="rainSection" wx:if="{{minutely}}">
+      <view class="card-title flex-between">
+        <view class="title-with-icon">
+          <text class="title-icon">🌧️</text>
+          <text>未来2小时降水</text>
+        </view>
+        <text class="title-sub text-muted" wx:if="{{minutely.summary}}">{{minutely.summary}}</text>
+      </view>
+      <view class="rain-bars-wrap" wx:if="{{minutely.bars.length > 0}}">
+        <view class="rain-bars">
+          <view class="rain-bar {{item.type === 'snow' ? 'rain-bar-snow' : ''}}" wx:for="{{minutely.bars}}" wx:key="idx" style="height: {{item.pct}}rpx;"></view>
+        </view>
+        <view class="rain-time-axis flex-between text-muted text-sm">
+          <text>现在</text>
+          <text>1小时后</text>
+          <text>2小时后</text>
+        </view>
+      </view>
+      <view class="rain-empty text-muted" wx:if="{{minutely.bars.length === 0}}">
+        <text>未来2小时无降水，安心出行</text>
+      </view>
+    </view>
+
+    <!-- ===== 24小时预报：温度曲线 + 图标 + 风力条 + 时间 ===== -->
+    <view class="card chart-card" wx:if="{{hourly.length > 0}}">
+      <view class="card-title flex-between">
+        <view class="title-with-icon">
+          <text class="title-icon">⏱️</text>
+          <text>24小时预报</text>
+        </view>
+        <view class="sun-times" wx:if="{{daily.length > 0 && daily[0].sunrise}}">
+          <text>🌅 {{daily[0].sunrise}}</text>
+          <text class="sun-time-sunset">🌇 {{daily[0].sunset}}</text>
+        </view>
+      </view>
+      <!-- 原生滚动（不用 enhanced）：拖动 1:1 跟手；曲线为离屏 canvas 导出的图片，滚动合成开销小 -->
+      <scroll-view class="chart-scroll" scroll-x>
+        <view class="chart-inner" style="width:{{hourlyChart.w}}px;">
+          <!-- 1. 时间轴行（含“现在”与“次日”跨天标识） -->
+          <view class="hourly-row hourly-times">
+            <view class="hcol" wx:for="{{hourly}}" wx:key="fxTime">
+              <text class="hcol-time {{item.isNow ? 'hcol-time-now' : ''}} {{item.isTomorrow ? 'hcol-time-tmr' : ''}}">{{item.timeStr}}</text>
             </view>
-            <text class="forecast-wind text-sm text-muted">{{item.windDirDay}} {{item.windScaleDay}}级</text>
+          </view>
+
+          <!-- 2. 天气图标行 -->
+          <view class="hourly-row hourly-icons">
+            <view class="hcol" wx:for="{{hourly}}" wx:key="fxTime">
+              <image class="hcol-icon" src="{{item.icon}}" mode="aspectFit"></image>
+            </view>
+          </view>
+
+          <!-- 3. 温度平滑曲线（离屏 Canvas 导出图片，60fps 滚动流畅） -->
+          <image class="hourly-curve-img" wx:if="{{hourlyChart.img}}" src="{{hourlyChart.img}}" style="width:{{hourlyChart.w}}px;height:{{hourlyChart.h}}px;" mode="scaleToFill"></image>
+
+          <!-- 4. 天气描述文字行 -->
+          <view class="hourly-row hourly-texts">
+            <view class="hcol" wx:for="{{hourly}}" wx:key="fxTime">
+              <text class="hcol-text">{{item.text}}</text>
+            </view>
+          </view>
+
+          <!-- 5. 风力胶囊行 -->
+          <view class="hourly-row hourly-winds">
+            <view class="hcol" wx:for="{{hourly}}" wx:key="fxTime">
+              <view class="wind-capsule">
+                <text class="wind-text">{{item.windScale ? item.windScale + '级' : '微风'}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+      <!-- 离屏画布：只作绘制缓冲，不参与滚动（导出图片后由上方 image 展示） -->
+      <canvas type="2d" id="hourlyCanvas" class="canvas-buffer" style="width:{{hourlyChart.w}}px;height:{{hourlyChart.h}}px;"></canvas>
+    </view>
+
+    <!-- ===== 7天预报：双温度曲线 + 整列高亮“今天” ===== -->
+    <view class="card chart-card" wx:if="{{daily.length > 1}}">
+      <view class="card-title flex-between">
+        <view class="title-with-icon">
+          <text class="title-icon">📅</text>
+          <text>7天天气预报</text>
+        </view>
+        <text class="title-sub text-muted">高低温度趋势</text>
+      </view>
+      <view class="daily-wrap">
+        <view class="daily-today-bg" wx:if="{{todayIdx >= 0}}" style="{{todayColStyle || ('left:' + (todayIdx * dailyColW) + 'px;width:' + dailyColW + 'px;')}}"></view>
+        <!-- 白天天气列 -->
+        <view class="daily-head">
+          <view class="fc-col" wx:for="{{daily}}" wx:key="fxDate">
+            <text class="fc-week {{item.isToday ? 'fc-week-today' : ''}}">{{item.weekDay}}</text>
+            <text class="fc-date">{{item.dateText}}</text>
+            <text class="fc-text">{{item.textDay}}</text>
+            <image class="fc-icon" src="{{item.iconDayDark}}" mode="aspectFit"></image>
+          </view>
+        </view>
+        <!-- 高低温度双平滑曲线 -->
+        <canvas type="2d" id="dailyCanvas" class="daily-canvas" style="width:{{dailyChart.w}}px;height:{{dailyChart.h}}px;"></canvas>
+        <!-- 夜间天气与风力锚定行（消除悬空感） -->
+        <view class="daily-foot">
+          <view class="fc-col" wx:for="{{daily}}" wx:key="fxDate">
+            <image class="fc-icon-night" src="{{item.iconNightDark}}" mode="aspectFit"></image>
+            <text class="fc-text-night">{{item.textNight}}</text>
+            <text class="fc-wind">{{item.windScaleDay ? item.windScaleDay + '级' : '微风'}}</text>
           </view>
         </view>
       </view>
     </view>
 
-    <!-- 天文信息（日出/日落/月相，来自 7 天预报数据，复用 weather 页下线的展示） -->
-    <view class="card astro-card" wx:if="{{daily.length > 0 && daily[0].sunrise}}">
-      <view class="card-title">天文信息</view>
-      <view class="astro-grid">
-        <view class="astro-item">
-          <text class="astro-icon">🌅</text>
-          <text class="astro-label">日出</text>
-          <text class="astro-value">{{daily[0].sunrise}}</text>
-        </view>
-        <view class="astro-item">
-          <text class="astro-icon">🌇</text>
-          <text class="astro-label">日落</text>
-          <text class="astro-value">{{daily[0].sunset}}</text>
-        </view>
-        <view class="astro-item">
-          <text class="astro-icon">🌙</text>
-          <text class="astro-label">月出</text>
-          <text class="astro-value">{{daily[0].moonrise || '--'}}</text>
-        </view>
-        <view class="astro-item">
-          <text class="astro-icon">🌑</text>
-          <text class="astro-label">月落</text>
-          <text class="astro-value">{{daily[0].moonset || '--'}}</text>
-        </view>
-        <view class="astro-item astro-item-full">
-          <text class="astro-icon">🌔</text>
-          <text class="astro-label">月相</text>
-          <text class="astro-value">{{daily[0].moonPhase || '--'}}</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 生活指数 -->
-    <view class="card" wx:if="{{indices.length > 0}}">
-      <view class="card-title">生活指数</view>
-      <view class="indices-grid">
-        <view class="index-item" wx:for="{{indices}}" wx:key="type">
-          <text class="index-name">{{item.name}}</text>
-          <text class="index-value">{{item.category}}</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 空气质量 -->
+    <!-- ===== 空气质量 ===== -->
     <view class="card air-card" wx:if="{{air}}">
-      <view class="card-title">空气质量</view>
+      <view class="card-title flex-between">
+        <view class="title-with-icon">
+          <text class="title-icon">🌿</text>
+          <text>空气质量</text>
+        </view>
+        <text class="title-sub text-muted">国标实时监测</text>
+      </view>
       <view class="air-row">
         <view class="air-badge" style="background:{{air.color.bg}};">
           <text class="air-aqi" style="color:{{air.color.fg}};">{{air.aqi}}</text>
@@ -159,117 +227,234 @@
         <view class="air-detail">
           <view class="air-item">
             <text class="air-label">首要污染物</text>
-            <text class="air-value">{{air.primary}}</text>
+            <text class="air-value">{{air.primary || '无'}}</text>
           </view>
           <view class="air-item">
-            <text class="air-label">PM2.5</text>
-            <text class="air-value">{{air.pm25}}</text>
+            <text class="air-label">PM2.5 颗粒物</text>
+            <text class="air-value">{{air.pm25}} <text class="air-unit">μg/m³</text></text>
           </view>
           <view class="air-item">
-            <text class="air-label">PM10</text>
-            <text class="air-value">{{air.pm10}}</text>
+            <text class="air-label">PM10 颗粒物</text>
+            <text class="air-value">{{air.pm10}} <text class="air-unit">μg/m³</text></text>
           </view>
         </view>
       </view>
     </view>
 
-    <!-- 潮汐快捷入口 -->
+    <!-- ===== 生活指数（现代化小组件网格） ===== -->
+    <view class="card indices-card" wx:if="{{indices.length > 0}}">
+      <view class="card-title flex-between">
+        <view class="title-with-icon">
+          <text class="title-icon">💡</text>
+          <text>生活指数</text>
+        </view>
+        <text class="title-sub text-muted">今日出行参考</text>
+      </view>
+      <view class="indices-grid">
+        <view class="index-tile" wx:for="{{indices}}" wx:key="type">
+          <view class="index-tile-header">
+            <text class="index-tile-icon">{{item.icon}}</text>
+            <text class="index-tile-name">{{item.name}}</text>
+          </view>
+          <text class="index-tile-value">{{item.category}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ===== 天文信息（双面板：太阳 | 月亮） ===== -->
+    <view class="card astro-card" wx:if="{{daily.length > 0 && daily[0].sunrise}}">
+      <view class="card-title flex-between">
+        <view class="title-with-icon">
+          <text class="title-icon">🌓</text>
+          <text>日月天文</text>
+        </view>
+        <text class="title-sub text-muted">出落与月相</text>
+      </view>
+      <view class="astro-row">
+        <!-- 太阳面板：暖色渐变 -->
+        <view class="astro-panel astro-panel-sun">
+          <view class="astro-panel-head">
+            <text class="astro-panel-icon">☀️</text>
+            <view class="astro-panel-meta">
+              <text class="astro-panel-name">太阳</text>
+              <text class="astro-panel-sub">日照 {{astro.daylightText}}</text>
+            </view>
+          </view>
+          <view class="astro-line">
+            <text class="astro-line-icon">🌅</text>
+            <view class="astro-line-text">
+              <text class="astro-line-label">日出</text>
+              <text class="astro-line-value">{{daily[0].sunrise}}</text>
+            </view>
+          </view>
+          <view class="astro-line">
+            <text class="astro-line-icon">🌇</text>
+            <view class="astro-line-text">
+              <text class="astro-line-label">日落</text>
+              <text class="astro-line-value">{{daily[0].sunset}}</text>
+            </view>
+          </view>
+          <view class="astro-bar">
+            <view class="astro-bar-fill astro-bar-fill-sun"></view>
+            <view class="astro-bar-cap" style="left: {{astro.daylightPercent}}%;"></view>
+          </view>
+        </view>
+        <!-- 月亮面板：冷色渐变 -->
+        <view class="astro-panel astro-panel-moon">
+          <view class="astro-panel-head">
+            <text class="astro-panel-icon">🌙</text>
+            <view class="astro-panel-meta">
+              <text class="astro-panel-name">月亮</text>
+              <text class="astro-panel-sub">月相 {{astro.moonPhaseText}}</text>
+            </view>
+          </view>
+          <view class="astro-line">
+            <text class="astro-line-icon">{{astro.moonriseIcon}}</text>
+            <view class="astro-line-text">
+              <text class="astro-line-label">月出</text>
+              <text class="astro-line-value">{{daily[0].moonrise || '--'}}</text>
+            </view>
+          </view>
+          <view class="astro-line">
+            <text class="astro-line-icon">{{astro.moonsetIcon}}</text>
+            <view class="astro-line-text">
+              <text class="astro-line-label">月落</text>
+              <text class="astro-line-value">{{daily[0].moonset || '--'}}</text>
+            </view>
+          </view>
+          <view class="astro-phase">
+            <text class="astro-phase-icon">{{astro.moonPhaseEmoji}}</text>
+            <text class="astro-phase-name">{{daily[0].moonPhase || '未知'}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- ===== 潮汐与海洋速报入口 ===== -->
     <view class="card tide-entry" bindtap="goToTide">
-      <view class="flex-between">
-        <view class="flex-row">
-          <text class="tide-entry-icon">🌊</text>
-          <view>
-            <text class="tide-entry-title">潮汐表</text>
-            <text class="text-sm text-muted">查看港口潮汐数据</text>
+      <view class="tide-entry-body flex-between">
+        <view class="tide-entry-main">
+          <view class="tide-entry-header">
+            <text class="tide-entry-icon">🌊</text>
+            <text class="tide-entry-title">潮汐预报与指南</text>
+            <text class="tide-entry-badge" wx:if="{{tideSummary}}">{{tideSummary.tideText}}</text>
           </view>
+          <text class="tide-entry-desc">港口逐时潮高曲线 · 满潮干潮与赶海海钓指南</text>
         </view>
-        <text class="text-muted">›</text>
+        <view class="tide-entry-btn">
+          <text class="tide-entry-btn-text">查看</text>
+          <text class="tide-entry-arrow">›</text>
+        </view>
       </view>
     </view>
 
-    <!-- 台风板块（中央气象台 NMC，免费；经 typhoon 云函数代理；无台风时也展示） -->
-    <view class="card typhoon-card">
+    <!-- 台风板块（中央气象台 NMC 实时追踪） -->
+    <view class="card typhoon-card" id="typhoonSection">
       <view class="card-title flex-between" bindtap="toggleTyphoon">
-        <text>🌀 台风路径</text>
-        <text class="text-muted text-sm">{{typhoonActiveCount > 0 ? (typhoonActiveCount + ' 个活跃') : (typhoons.length === 0 ? '当前无台风' : '无活跃 · 全年 ' + typhoonTotal + ' 个')}}{{typhoonCollapsed ? ' ▾' : ' ▴'}}</text>
+        <view class="title-with-icon">
+          <text class="title-icon">🌀</text>
+          <text>台风路径追踪</text>
+        </view>
+        <view class="typhoon-header-right">
+          <text class="typhoon-status-pill {{typhoonActiveCount > 0 ? 'pill-active' : 'pill-quiet'}}">{{typhoonActiveCount > 0 ? (typhoonActiveCount + ' 个活跃') : '暂无活动台风'}}</text>
+          <text class="typhoon-arrow">{{typhoonCollapsed ? '▾' : '▴'}}</text>
+        </view>
       </view>
 
       <view wx:if="{{!typhoonCollapsed}}">
         <view wx:if="{{typhoonLoading}}" class="typhoon-loading"><text>加载台风数据…</text></view>
         <block wx:else>
-          <view wx:if="{{typhoons.length === 0}}" class="typhoon-empty">
-            <text class="text-muted">🌀 当前无台风活动</text>
+          <!-- 场景一：当前无活跃台风（常态安全场景） -->
+          <view class="typhoon-peace-panel" wx:if="{{typhoonActiveCount === 0}}">
+            <view class="peace-icon-wrap">
+              <text class="peace-icon">🛡️</text>
+            </view>
+            <view class="peace-meta">
+              <text class="peace-title">西北太平洋及南海暂无台风活动</text>
+              <text class="peace-sub">数据对接中央气象台（NMC）· 24小时气旋监测中</text>
+            </view>
+            <!-- 历史档案折叠抽屉按钮 -->
+            <view class="history-toggle-btn" bindtap="toggleHistoryTyphoons" wx:if="{{typhoonDisplay.length > 0}}">
+              <text class="history-btn-text">近期历史台风档案 ({{typhoonDisplay.length}})</text>
+              <text class="history-btn-arrow">{{showHistoryTyphoons ? '▴' : '▾'}}</text>
+            </view>
           </view>
 
-          <block wx:else>
-            <view wx:if="{{typhoonActiveCount === 0}}" class="typhoon-hint text-sm text-muted">
-              当前无活跃台风，以下为全年历史台风（点击查看路径）
-            </view>
-
-            <view class="typhoon-item" wx:for="{{typhoons}}" wx:key="id">
-              <!-- 简要卡片：点开查看路径详情（活跃/历史均可） -->
-              <view class="typhoon-brief" bindtap="toggleTyphoonDetail" data-id="{{item.id}}">
-                <view class="typhoon-brief-top">
-                  <text class="typhoon-name">{{item.name}}<text class="text-sm text-muted"> {{item.enName}}</text></text>
-                  <text wx:if="{{item.current}}" class="typhoon-grade grade-{{item.current.grade}}">{{item.current.gradeText}}</text>
-                  <text wx:else class="typhoon-grade typhoon-grade-hist">历史</text>
+          <!-- 场景二：有活跃台风，或者用户展开了历史档案 -->
+          <view class="typhoon-list-wrap" wx:if="{{typhoonActiveCount > 0 || showHistoryTyphoons}}">
+            <view class="typhoon-card-item {{item.current ? 'item-active' : 'item-hist'}}" wx:for="{{typhoonDisplay}}" wx:key="id">
+              <!-- 头部概要卡片 -->
+              <view class="typhoon-item-header" bindtap="toggleTyphoonDetail" data-id="{{item.id}}">
+                <view class="t-item-main">
+                  <view class="t-name-row">
+                    <text class="t-name">{{item.name}}</text>
+                    <text class="t-en-name">{{item.enName}}</text>
+                    <text class="t-num-tag" wx:if="{{item.number}}">{{item.number}}号</text>
+                  </view>
+                  <text wx:if="{{item.trend}}" class="t-trend-text">{{item.trend}}</text>
+                  <text wx:elif="{{!item.current}}" class="t-hist-text">已停编 · 历史气旋档案</text>
                 </view>
-                <view wx:if="{{item.current}}" class="typhoon-brief-sub text-sm text-muted">
-                  {{item.current.lat}}°N, {{item.current.lon}}°E · 风速{{item.current.windSpeed}}m/s · 气压{{item.current.pressure}}hPa
-                </view>
-                <view wx:else class="typhoon-brief-sub text-sm text-muted">编号 {{item.number}} · 已停编</view>
-                <text wx:if="{{item.trend}}" class="typhoon-trend text-sm">{{item.trend}}</text>
-                <text class="typhoon-expand text-muted text-sm">{{typhoonOpenId === item.id ? '收起 ▴' : '路径 ▾'}}</text>
-              </view>
-
-              <!-- 详情：地图路径 + 强度 + 风圈 + 近期路径 -->
-              <view wx:if="{{typhoonOpenId === item.id && typhoonMap}}" class="typhoon-detail">
-                <map class="typhoon-map" latitude="{{typhoonMap.centerLat}}" longitude="{{typhoonMap.centerLng}}"
-                     scale="4" polyline="{{typhoonMap.polylines}}" markers="{{typhoonMap.markers}}" enable-rotate="{{false}}"></map>
-                <view class="typhoon-map-legend text-sm text-muted">
-                  <text style="color:#FF4D4F;">— 实况路径</text>
-                  <text style="color:#FFA940;margin-left:16rpx;">- - 预报路径</text>
-                </view>
-
-                <view class="typhoon-detail-grid" wx:if="{{typhoonMap.current}}">
-                  <view class="typhoon-detail-row">
-                    <text class="detail-label">强度</text>
-                    <text class="detail-value grade-{{typhoonMap.current.grade}}">{{typhoonMap.current.gradeText}}</text>
-                  </view>
-                  <view class="typhoon-detail-row">
-                    <text class="detail-label">中心气压</text>
-                    <text class="detail-value">{{typhoonMap.current.pressure}} hPa</text>
-                  </view>
-                  <view class="typhoon-detail-row">
-                    <text class="detail-label">最大风速</text>
-                    <text class="detail-value">{{typhoonMap.current.windSpeed}} m/s</text>
-                  </view>
-                  <view class="typhoon-detail-row">
-                    <text class="detail-label">移向 / 移速</text>
-                    <text class="detail-value">{{typhoonMap.current.moveDirText}} {{typhoonMap.current.moveSpeed}} km/h</text>
-                  </view>
-                  <view class="typhoon-detail-row typhoon-detail-row-full">
-                    <text class="detail-label">风圈半径</text>
-                    <text class="detail-value">{{typhoonMap.radiiText}}</text>
-                  </view>
-                  <view class="typhoon-detail-row typhoon-detail-row-full">
-                    <text class="detail-label">当前位置</text>
-                    <text class="detail-value">{{typhoonMap.current.lat}}°N, {{typhoonMap.current.lon}}°E</text>
-                  </view>
-                </view>
-
-                <view class="typhoon-path-title text-sm text-muted">近期路径</view>
-                <view class="typhoon-path-list">
-                  <view class="typhoon-path-item" wx:for="{{typhoonMap.recentPoints}}" wx:key="time">
-                    <text class="tp-time">{{item.time}}</text>
-                    <text class="tp-grade grade-{{item.grade}}">{{item.gradeText}}</text>
-                    <text class="tp-pos">{{item.lat}}°N {{item.lon}}°E</text>
-                    <text class="tp-wind">{{item.windSpeed}}m/s {{item.pressure}}hPa</text>
-                  </view>
+                <view class="t-item-side">
+                  <text wx:if="{{item.current}}" class="typhoon-grade-badge grade-{{item.current.grade}}">{{item.current.gradeText}}</text>
+                  <text wx:else class="typhoon-grade-badge grade-hist">已停编</text>
+                  <text class="t-expand-hint">{{typhoonOpenId === item.id ? '收起 ▴' : '路径图 ▾'}}</text>
                 </view>
               </view>
+
+              <!-- 展开详情：4 宫格参数看板 + 路径地图 + 近期测站轨迹 -->
+              <view wx:if="{{typhoonOpenId === item.id && typhoonMap}}" class="typhoon-detail-box">
+                <!-- 4 宫格核心参数仪表盘 -->
+                <view class="typhoon-dashboard-grid" wx:if="{{typhoonMap.current}}">
+                  <view class="t-dash-cell">
+                    <text class="dash-label">中心最大风速</text>
+                    <text class="dash-value highlight-wind">{{typhoonMap.current.windSpeed}} <text class="dash-unit">m/s</text></text>
+                  </view>
+                  <view class="t-dash-cell">
+                    <text class="dash-label">中心最低气压</text>
+                    <text class="dash-value">{{typhoonMap.current.pressure}} <text class="dash-unit">hPa</text></text>
+                  </view>
+                  <view class="t-dash-cell">
+                    <text class="dash-label">移动速度与方向</text>
+                    <text class="dash-value">{{typhoonMap.current.moveDirText || '—'}} {{typhoonMap.current.moveSpeed ? typhoonMap.current.moveSpeed + ' km/h' : ''}}</text>
+                  </view>
+                  <view class="t-dash-cell">
+                    <text class="dash-label">中心坐标定位</text>
+                    <text class="dash-value">{{typhoonMap.current.lat}}°N, {{typhoonMap.current.lon}}°E</text>
+                  </view>
+                </view>
+
+                <!-- 风圈半径说明条 -->
+                <view class="radii-info-bar" wx:if="{{typhoonMap.radiiText && typhoonMap.radiiText !== '—'}}">
+                  <text class="radii-tag">风圈</text>
+                  <text class="radii-content">{{typhoonMap.radiiText}}</text>
+                </view>
+
+                <!-- 地图 -->
+                <view class="t-map-container">
+                  <map class="typhoon-map" latitude="{{typhoonMap.centerLat}}" longitude="{{typhoonMap.centerLng}}"
+                       scale="4" polyline="{{typhoonMap.polylines}}" markers="{{typhoonMap.markers}}" enable-rotate="{{false}}"></map>
+                  <view class="t-map-legend">
+                    <view class="legend-chip"><text class="legend-line line-solid"></text><text>实况路径</text></view>
+                    <view class="legend-chip"><text class="legend-line line-dashed"></text><text>预报路径</text></view>
+                  </view>
+                </view>
+
+                <!-- 近期路径时间轴 -->
+                <view class="t-timeline-section" wx:if="{{typhoonMap.recentPoints && typhoonMap.recentPoints.length > 0}}">
+                  <view class="t-timeline-title">近期测站轨迹记录</view>
+                  <view class="t-timeline-list">
+                    <view class="t-timeline-item" wx:for="{{typhoonMap.recentPoints}}" wx:key="time">
+                      <view class="timeline-dot"></view>
+                      <text class="timeline-time">{{item.time}}</text>
+                      <text class="timeline-grade grade-{{item.grade}}">{{item.gradeText}}</text>
+                      <text class="timeline-pos">{{item.lat}}°N, {{item.lon}}°E</text>
+                      <text class="timeline-meta">{{item.windSpeed}}m/s · {{item.pressure}}hPa</text>
+                    </view>
+                  </view>
+                </view>
+              </view>
             </view>
-          </block>
+          </view>
         </block>
       </view>
     </view>
@@ -280,34 +465,4 @@
     </view>
   </view>
 
-  <!-- 全天逐时天气底部弹层 -->
-  <view class="hourly-mask" wx:if="{{showHourlySheet}}" bindtap="closeHourlySheet">
-    <view class="hourly-panel" catchtap="noBubble">
-      <view class="hourly-grabber"></view>
-      <view class="hourly-head">
-        <view class="flex-col">
-          <text class="hourly-title">全天天气</text>
-          <text class="hourly-sub text-sm text-muted">{{city.name}} · 未来 24 小时逐时</text>
-        </view>
-        <text class="hourly-close" bindtap="closeHourlySheet">✕</text>
-      </view>
-
-      <view class="hourly-body" wx:if="{{!hourlyLoading}}">
-        <view class="hourly-row {{item.isNow ? 'hourly-row-now' : ''}}" wx:for="{{hourly}}" wx:key="fxTime">
-          <text class="hr-time {{item.isNow ? 'hr-time-now' : ''}}">{{item.timeStr}}</text>
-          <image class="hr-icon" src="{{item.icon}}" mode="aspectFit"></image>
-          <text class="hr-temp">{{item.temp}}°</text>
-          <text class="hr-text">{{item.text}}</text>
-          <text class="hr-pop" wx:if="{{item.pop > 0}}">💧{{item.pop}}%</text>
-          <text class="hr-wind text-sm text-muted" wx:else>{{item.windDir}} {{item.windScale}}级</text>
-        </view>
-      </view>
-      <view class="hourly-loading text-center text-muted" wx:else>
-        <text>加载逐时天气...</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- 隐私授权弹窗（定位等隐私接口触发） -->
-  <privacy-popup />
 </view>

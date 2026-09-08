@@ -4,9 +4,12 @@
 .content-layer {
   position: relative;
   z-index: 1;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ===== 全屏天气动效层（固定背景） ===== */
+/* ===== 全屏自然天气天空氛围层（固定背景） ===== */
 .weather-effect {
   position: fixed;
   top: 0;
@@ -16,135 +19,49 @@
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
+  transition: background 0.8s ease-in-out;
 }
 
-/* 各天气天空渐变 */
-.effect-sun {
-  background: linear-gradient(165deg, #2E86DE 0%, #5DADE2 45%, #AED6F1 100%);
-}
-.effect-cloud {
-  background: linear-gradient(165deg, #5D6D7E 0%, #85929E 50%, #AEB6BF 100%);
-}
-.effect-rain {
-  background: linear-gradient(165deg, #34495E 0%, #4B6584 50%, #5D6D7E 100%);
-}
-.effect-thunder {
-  background: linear-gradient(165deg, #1B2631 0%, #212F3D 50%, #283747 100%);
-}
-.effect-snow {
-  background: linear-gradient(165deg, #7F8C9B 0%, #AAB7C4 50%, #DDE6EE 100%);
-}
-.effect-fog {
-  background: linear-gradient(165deg, #909497 0%, #B2BABB 50%, #CCD1D1 100%);
-}
-
-/* 雨滴下落（含雷电复用） */
-@keyframes rain-fall {
-  0% { transform: translateY(-80rpx); opacity: 0; }
-  10% { opacity: 0.85; }
-  90% { opacity: 0.85; }
-  100% { transform: translateY(2000rpx); opacity: 0; }
-}
-.effect-rain .particle,
-.effect-thunder .particle {
-  position: absolute;
-  width: 2rpx;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.75));
-  border-radius: 2rpx;
-  animation: rain-fall linear infinite;
-}
-
-/* 雪花飘落 */
-@keyframes snow-fall {
-  0% { transform: translateY(-80rpx) translateX(0); opacity: 0; }
-  10% { opacity: 0.95; }
-  100% { transform: translateY(2000rpx) translateX(60rpx); opacity: 0; }
-}
-.effect-snow .particle {
-  position: absolute;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 50%;
-  box-shadow: 0 0 6rpx rgba(255, 255, 255, 0.6);
-  animation: snow-fall linear infinite;
-}
-
-/* 云层飘动 */
-@keyframes cloud-drift {
-  0% { transform: translateX(-200rpx); }
-  100% { transform: translateX(950rpx); }
-}
-.effect-cloud .cloud,
-.effect-fog .cloud {
-  position: absolute;
-  background: rgba(255, 255, 255, 0.22);
-  border-radius: 50%;
-  filter: blur(16rpx);
-  animation: cloud-drift linear infinite;
-}
-.effect-fog .cloud {
-  background: rgba(255, 255, 255, 0.42);
-  filter: blur(30rpx);
-}
-
-/* 太阳 / 光晕 */
-@keyframes sun-pulse {
-  0%, 100% { transform: scale(1); opacity: 0.9; }
-  50% { transform: scale(1.06); opacity: 1; }
-}
-@keyframes sun-rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-.effect-sun .sun {
-  position: absolute;
-  top: 70rpx;
-  right: 70rpx;
-  width: 120rpx;
-  height: 120rpx;
-  background: radial-gradient(circle at 32% 30%, #FFF6C0, #FFD93B);
-  border-radius: 50%;
-  box-shadow: 0 0 60rpx rgba(255, 217, 59, 0.7), 0 0 130rpx rgba(255, 217, 59, 0.4);
-  animation: sun-pulse 3s ease-in-out infinite;
-}
-.effect-sun .sun-ray {
-  position: absolute;
-  top: 56rpx;
-  right: 56rpx;
-  width: 148rpx;
-  height: 148rpx;
-  border: 4rpx solid rgba(255, 255, 255, 0.25);
-  border-radius: 50%;
-  animation: sun-rotate 8s linear infinite;
-}
-.effect-sun .sun-ray:nth-child(2) { animation-duration: 10s; animation-delay: -2s; border-width: 6rpx; }
-.effect-sun .sun-ray:nth-child(3) { animation-duration: 12s; animation-delay: -5s; border-width: 3rpx; }
-.effect-sun .sun-ray:nth-child(4) { animation-duration: 14s; animation-delay: -8s; border-width: 5rpx; }
-
-/* 雷电闪烁（全屏） */
-@keyframes thunder-flash {
-  0%, 90%, 100% { opacity: 0; }
-  91% { opacity: 0.28; }
-  92% { opacity: 0; }
-  93% { opacity: 0.4; }
-  94% { opacity: 0; }
-  95% { opacity: 0.22; }
-  96% { opacity: 0; }
-}
-.effect-thunder.weather-effect::after {
+/* 顶部微弱自然大气天光反射 */
+.weather-effect::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.18);
-  animation: thunder-flash 5s infinite;
+  height: 480rpx;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 75%);
   pointer-events: none;
 }
 
-/* ===== Hero 顶部天气信息（透明，浮于天空之上） ===== */
+/* 优雅通透的各天气天空微渐变（晴/云/雨/雷/雪/雾） */
+.effect-sun {
+  background: linear-gradient(180deg, #3A8AE8 0%, #68A7F4 32%, #C4DDFA 65%, #F0F4FA 100%);
+}
+
+.effect-cloud {
+  background: linear-gradient(180deg, #58718E 0%, #7E97B2 32%, #C9D8E6 65%, #F2F5F8 100%);
+}
+
+.effect-rain {
+  background: linear-gradient(180deg, #475F78 0%, #69839C 32%, #BCCCDA 65%, #EFF3F6 100%);
+}
+
+.effect-thunder {
+  background: linear-gradient(180deg, #304052 0%, #4D6277 32%, #A8B8C8 65%, #ECEFF4 100%);
+}
+
+.effect-snow {
+  background: linear-gradient(180deg, #6C8198 0%, #96A8BB 32%, #DCE5EE 65%, #F5F7FA 100%);
+}
+
+.effect-fog {
+  background: linear-gradient(180deg, #7C8690 0%, #9EA7B0 32%, #D9DFE4 65%, #F4F6F8 100%);
+}
+
+/* ===== Hero：大字温度版式（参考墨迹风格） ===== */
 .hero-section {
-  padding: 40rpx 40rpx 30rpx;
+  padding: 30rpx 40rpx 36rpx;
   color: #FFFFFF;
   position: relative;
   z-index: 1;
@@ -152,7 +69,7 @@
 }
 .hero-dark {
   color: #1A1A1A;
-  text-shadow: 0 2rpx 14rpx rgba(255, 255, 255, 0.45);
+  text-shadow: none;
 }
 .hero-dark .city-arrow {
   border-top-color: rgba(0, 0, 0, 0.45);
@@ -162,17 +79,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 30rpx;
+  margin-bottom: 10rpx;
   position: relative;
   z-index: 1;
 }
-
+.city-pin {
+  font-size: 30rpx;
+  margin-right: 6rpx;
+}
 .city-name {
   font-size: 36rpx;
   font-weight: 700;
   margin-right: 8rpx;
 }
-
 .city-arrow {
   width: 0;
   height: 0;
@@ -181,201 +100,593 @@
   border-top: 12rpx solid rgba(255, 255, 255, 0.7);
 }
 
-.now-weather {
+/* 预警徽标（左上，橙/黄/红底白字） */
+.hero-warning-row {
+  position: relative;
+  z-index: 1;
+  min-height: 56rpx;
+  margin: 6rpx 0;
+}
+.hero-warning {
+  display: inline-flex;
+  align-items: center;
+  padding: 8rpx 20rpx;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  text-shadow: none;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
+}
+.hero-warning-icon {
+  margin-right: 8rpx;
+  font-size: 24rpx;
+}
+
+/* 大字温度（细体，居中） */
+.hero-temp-row {
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  margin: -20rpx 0 0;
+}
+.hero-temp {
+  font-size: 190rpx;
+  font-weight: 100;
+  line-height: 1.15;
+  letter-spacing: -4rpx;
+}
+.hero-temp-unit {
+  font-size: 90rpx;
+  font-weight: 200;
+  vertical-align: 60rpx;
+  letter-spacing: 0;
+}
+
+/* 天气文字 | AQI 徽标 */
+.hero-cond {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 20rpx 0;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  margin-top: 6rpx;
+}
+.hero-cond-text {
+  font-size: 32rpx;
+  font-weight: 500;
+}
+.hero-cond-sep {
+  margin: 0 18rpx;
+  opacity: 0.6;
+  font-size: 28rpx;
+}
+.hero-aqi {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  text-shadow: none;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.12);
+}
+
+/* 关键指标行 */
+.hero-metrics {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 22rpx;
+  font-size: 26rpx;
+  opacity: 0.95;
   position: relative;
   z-index: 1;
 }
+.hero-metric-sep {
+  margin: 0 16rpx;
+  opacity: 0.55;
+}
 
-.now-temp {
-  font-size: 110rpx;
-  font-weight: 200;
+/* 快讯卡：降水 / 台风 */
+.notice-row {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 30rpx;
+  position: relative;
+  z-index: 1;
+}
+.notice-card {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 18rpx;
+  padding: 20rpx 22rpx;
+  text-shadow: none;
+  transition: background 0.15s;
+}
+.notice-card:active {
+  background: rgba(255, 255, 255, 0.35);
+}
+.hero-dark .notice-card {
+  background: rgba(0, 0, 0, 0.05);
+}
+.notice-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: inherit;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.notice-arrow {
+  margin-left: 12rpx;
+  font-size: 30rpx;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+/* 今明两条预报胶囊 */
+.today-strip {
+  display: flex;
+  align-items: stretch;
+  margin-top: 24rpx;
+  background: rgba(255, 255, 255, 0.20);
+  border: 1rpx solid rgba(255, 255, 255, 0.32);
+  backdrop-filter: blur(12px);
+  border-radius: 20rpx;
+  padding: 16rpx 24rpx;
+  position: relative;
+  z-index: 1;
+  text-shadow: none;
+}
+.hero-dark .today-strip {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+.today-cell {
+  flex: 1;
+  min-width: 0;
+}
+.today-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.today-label {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: inherit;
+}
+.today-temp {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: inherit;
+}
+.today-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6rpx;
+}
+.today-text {
+  font-size: 22rpx;
+  opacity: 0.90;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.today-icon {
+  width: 40rpx;
+  height: 40rpx;
+  flex-shrink: 0;
+  margin-left: 10rpx;
+}
+.today-divider {
+  width: 1rpx;
+  background: rgba(255, 255, 255, 0.32);
+  margin: 4rpx 22rpx;
+}
+.hero-dark .today-divider {
+  background: rgba(0, 0, 0, 0.10);
+}
+
+/* ===== 统一玻璃卡片规范 ===== */
+.card {
+  background: rgba(255, 255, 255, 0.90);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-radius: 22rpx;
+  padding: 24rpx 26rpx;
+  margin: 16rpx 20rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.80);
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+}
+
+.card .card-title::before {
+  display: none;
+}
+
+.card-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1F1F1F;
+  margin-bottom: 20rpx;
+  display: flex;
+  align-items: center;
+  letter-spacing: 0.5rpx;
+}
+
+.title-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.title-icon {
+  font-size: 28rpx;
   line-height: 1;
 }
 
-.now-info {
-  flex: 1;
-  margin-left: 30rpx;
+.title-sub {
+  font-size: 22rpx;
+  color: #8C8C8C;
+  font-weight: 400;
+  letter-spacing: 0;
 }
 
-.now-text {
-  font-size: 38rpx;
-  font-weight: 500;
-  display: block;
+/* ===== 图表卡片（24小时 / 7天）===== */
+.chart-card {
+  position: relative;
+  overflow: hidden;
 }
 
-.now-feels {
-  font-size: 26rpx;
-  opacity: 0.85;
-  margin-top: 6rpx;
-  display: block;
-}
-
-.now-icon {
-  width: 120rpx;
-  height: 120rpx;
-  flex-shrink: 0;
-}
-
-.now-detail {
+.sun-times {
   display: flex;
-  flex-wrap: wrap;
-  margin-top: 20rpx;
-  padding-top: 20rpx;
-  border-top: 1rpx solid rgba(255, 255, 255, 0.25);
+  align-items: center;
+  font-size: 24rpx;
+  color: #999;
+  font-weight: 400;
+}
+.sun-time-sunset {
+  margin-left: 20rpx;
+}
+
+.chart-scroll {
+  width: 100%;
+  margin-top: 6rpx;
+}
+/* webview 滚动条隐藏（滚动跟随手指的原生实现） */
+.chart-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.chart-inner {
+  position: relative;
+}
+
+/* 离屏绘制缓冲：移出可视区、不参与布局与滚动，仅用于导出图片 */
+.canvas-buffer {
+  position: absolute;
+  left: -3000px;
+  top: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 曲线图（离屏 canvas 导出的临时图片） */
+/* 24小时逐时预报单列等宽布局 (58px) */
+.hourly-row {
+  display: flex;
+}
+
+.hcol {
+  width: 58px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 1. 时间轴 */
+.hourly-times {
+  margin-bottom: 6px;
+  margin-top: 4px;
+}
+.hcol-time {
+  font-size: 11px;
+  color: #8C8C8C;
+  font-weight: 500;
+}
+.hcol-time-now {
+  color: #1677FF;
+  font-weight: 700;
+}
+.hcol-time-tmr {
+  color: #FA8C16;
+  font-weight: 600;
+}
+
+/* 2. 天气图标 */
+.hourly-icons {
+  margin-bottom: 2px;
+}
+.hcol-icon {
+  width: 28px;
+  height: 28px;
+}
+
+/* 3. 温度平滑曲线（离屏 canvas 导出的临时图片） */
+.hourly-curve-img {
+  display: block;
+}
+
+/* 4. 天气文字 */
+.hourly-texts {
+  margin-top: 4px;
+}
+.hcol-text {
+  font-size: 11px;
+  color: #595959;
+  max-width: 54px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+/* 5. 风级微型胶囊 */
+.hourly-winds {
+  margin-top: 6px;
+  padding-bottom: 4px;
+}
+.wind-capsule {
+  background: #F4F6F9;
+  border-radius: 10px;
+  padding: 2px 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.wind-text {
+  font-size: 10px;
+  color: #8C8C8C;
+  white-space: nowrap;
+}
+
+/* 7天：整列高亮 + 双曲线 + 底部夜间天气 */
+.daily-wrap {
+  position: relative;
+  margin-top: 6rpx;
+}
+.daily-today-bg {
+  position: absolute;
+  top: -6rpx;
+  bottom: -6rpx;
+  background: rgba(22, 119, 255, 0.07);
+  border-radius: 16rpx;
+  z-index: 0;
+  transition: all 0.25s ease;
+}
+.daily-head {
+  display: flex;
   position: relative;
   z-index: 1;
 }
-
-.detail-item {
-  width: 50%;
-  display: flex;
-  justify-content: space-between;
-  padding: 8rpx 0;
-}
-
-.detail-label {
-  font-size: 26rpx;
-  opacity: 0.9;
-}
-
-.detail-value {
-  font-size: 26rpx;
-  font-weight: 500;
-}
-
-/* ===== 玻璃卡片（毛玻璃叠在天空之上） ===== */
-.card {
-  background: rgba(255, 255, 255, 0.82);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  border-radius: 24rpx;
-  padding: 30rpx;
-  margin: 20rpx;
-  box-shadow: 0 6rpx 24rpx rgba(0, 0, 0, 0.12);
-}
-
-/* 7天预报 */
-.forecast-list {
-  padding: 10rpx 0;
-}
-
-.forecast-item {
-  display: flex;
-  align-items: center;
-  padding: 24rpx 0;
-  border-bottom: 1rpx solid #F0F0F0;
-}
-
-.forecast-item:last-child {
-  border-bottom: none;
-}
-
-.forecast-date {
-  width: 110rpx;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.forecast-weekday {
-  font-size: 30rpx;
-  font-weight: 500;
-  color: #333;
-}
-
-.forecast-day {
-  font-size: 22rpx;
-  color: #999;
-  margin-top: 4rpx;
-}
-
-.forecast-icon {
-  width: 64rpx;
-  height: 64rpx;
-  margin: 0 16rpx;
-  flex-shrink: 0;
-}
-
-.forecast-text {
+.fc-col {
   flex: 1;
-  font-size: 30rpx;
-  color: #555;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.forecast-meta {
-  width: 190rpx;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: flex-end;
+  align-items: center;
+  padding: 6rpx 0 2rpx;
 }
-
-.forecast-temp {
-  font-size: 30rpx;
-  font-weight: 500;
-  white-space: nowrap;
+.fc-week {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #262626;
 }
-
-.forecast-wind {
-  font-size: 24rpx;
-  color: #999;
-  margin-top: 6rpx;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 生活指数 */
-.indices-grid {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.index-item {
-  width: 25%;
-  text-align: center;
-  padding: 16rpx 0;
-}
-
-.index-name {
-  display: block;
-  font-size: 24rpx;
-  color: #999;
-  margin-bottom: 6rpx;
-}
-
-.index-value {
-  display: block;
-  font-size: 28rpx;
-  font-weight: 500;
+.fc-week-today {
   color: #1677FF;
 }
+.fc-date {
+  font-size: 20rpx;
+  color: #8C8C8C;
+  margin-top: 2rpx;
+}
+.fc-text {
+  font-size: 22rpx;
+  color: #595959;
+  margin-top: 6rpx;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fc-icon {
+  width: 46rpx;
+  height: 46rpx;
+  margin-top: 6rpx;
+}
+.daily-canvas {
+  display: block;
+  position: relative;
+  z-index: 1;
+  margin: 6rpx auto;
+}
 
-/* 潮汐入口 */
+.daily-foot {
+  display: flex;
+  position: relative;
+  z-index: 1;
+  margin-top: 4rpx;
+}
+.fc-icon-night {
+  width: 44rpx;
+  height: 44rpx;
+}
+.fc-text-night {
+  font-size: 21rpx;
+  color: #595959;
+  margin-top: 4rpx;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fc-wind {
+  font-size: 19rpx;
+  color: #8C8C8C;
+  margin-top: 4rpx;
+  white-space: nowrap;
+}
+
+/* ===== 生活指数（现代化小组件网格） ===== */
+.indices-card {
+  padding-bottom: 24rpx;
+}
+
+.indices-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14rpx;
+  margin-top: 10rpx;
+}
+
+.index-tile {
+  background: #F7F9FC;
+  border-radius: 16rpx;
+  padding: 16rpx 8rpx;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+.index-tile:active {
+  background: #EBF2FA;
+  transform: scale(0.97);
+}
+
+.index-tile-header {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  margin-bottom: 8rpx;
+}
+
+.index-tile-icon {
+  font-size: 26rpx;
+  line-height: 1;
+}
+
+.index-tile-name {
+  font-size: 21rpx;
+  color: #8C8C8C;
+  white-space: nowrap;
+}
+
+.index-tile-value {
+  font-size: 25rpx;
+  font-weight: 600;
+  color: #1677FF;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* ===== 潮汐海洋速报入口 ===== */
 .tide-entry {
+  background: linear-gradient(135deg, rgba(230, 244, 255, 0.92) 0%, rgba(240, 248, 255, 0.95) 100%);
+  border: 1rpx solid rgba(22, 119, 255, 0.18);
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .tide-entry:active {
-  background: rgba(248, 248, 248, 0.9);
+  background: rgba(220, 240, 255, 0.95);
+  transform: scale(0.98);
+}
+
+.tide-entry-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.tide-entry-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.tide-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
 }
 
 .tide-entry-icon {
-  font-size: 50rpx;
-  margin-right: 20rpx;
+  font-size: 34rpx;
+  flex-shrink: 0;
 }
 
 .tide-entry-title {
-  font-size: 30rpx;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #0D4E8C;
+}
+
+.tide-entry-badge {
+  font-size: 20rpx;
   font-weight: 600;
+  color: #1677FF;
+  background: #E6F4FF;
+  border: 1rpx solid rgba(22, 119, 255, 0.25);
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+}
+
+.tide-entry-desc {
+  font-size: 22rpx;
+  color: #595959;
+  margin-top: 6rpx;
   display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tide-entry-btn {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  background: #1677FF;
+  color: #FFFFFF;
+  padding: 10rpx 20rpx;
+  border-radius: 24rpx;
+  flex-shrink: 0;
+  box-shadow: 0 4rpx 10rpx rgba(22, 119, 255, 0.25);
+}
+
+.tide-entry-btn-text {
+  font-size: 22rpx;
+  font-weight: 500;
+}
+
+.tide-entry-arrow {
+  font-size: 24rpx;
+  line-height: 1;
 }
 
 /* 更新时间 */
@@ -384,171 +695,29 @@
   text-align: center;
 }
 
-/* ===== 实时天气可点击卡片 ===== */
-.now-card {
-  position: relative;
-  z-index: 1;
-  cursor: pointer;
-  border-radius: 28rpx;
-  transition: opacity 0.15s, background 0.15s;
-}
-.now-card:active {
-  opacity: 0.88;
-  background: rgba(255, 255, 255, 0.08);
-}
-.now-card-hint {
-  display: block;
-  text-align: center;
-  font-size: 24rpx;
-  opacity: 0.8;
-  margin-top: 18rpx;
-  animation: hint-bounce 1.8s ease-in-out infinite;
-}
-@keyframes hint-bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(6rpx); }
-}
-
-/* ===== 全天逐时天气底部弹层 ===== */
-.hourly-mask {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 100;
-  display: flex;
-  align-items: flex-end;
-  animation: mask-fade 0.25s ease;
-}
-@keyframes mask-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.hourly-panel {
-  width: 100%;
-  max-height: 78vh;
-  background: #FFFFFF;
-  border-radius: 32rpx 32rpx 0 0;
-  padding: 16rpx 30rpx calc(30rpx + env(safe-area-inset-bottom));
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  animation: sheet-up 0.3s cubic-bezier(0.18, 0.89, 0.32, 1);
-}
-@keyframes sheet-up {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-
-.hourly-grabber {
-  width: 72rpx;
-  height: 8rpx;
-  background: #D9D9D9;
-  border-radius: 4rpx;
-  margin: 8rpx auto 16rpx;
-}
-
-.hourly-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 16rpx;
-  border-bottom: 1rpx solid #F0F0F0;
-}
-.hourly-title {
-  font-size: 34rpx;
-  font-weight: 700;
-  color: #1A1A1A;
-}
-.hourly-sub {
-  margin-top: 4rpx;
-}
-.hourly-close {
-  font-size: 40rpx;
-  color: #999;
-  padding: 0 10rpx;
-  line-height: 1;
-}
-
-.hourly-body {
-  flex: 1;
-  overflow-y: auto;
-  margin-top: 8rpx;
-  -webkit-overflow-scrolling: touch;
-}
-
-.hourly-row {
-  display: flex;
-  align-items: center;
-  padding: 22rpx 0;
-  border-bottom: 1rpx solid #F5F5F5;
-}
-.hourly-row-now {
-  background: #FFF7E6;
-  margin: 0 -30rpx;
-  padding-left: 30rpx;
-  padding-right: 30rpx;
-  border-radius: 12rpx;
-}
-
-.hr-time {
-  width: 110rpx;
-  font-size: 30rpx;
-  color: #333;
-  font-weight: 500;
-}
-.hr-time-now {
-  color: #FA8C16;
-}
-.hr-icon {
-  width: 70rpx;
-  height: 70rpx;
-  text-align: center;
-  flex-shrink: 0;
-}
-.hr-temp {
-  width: 110rpx;
-  font-size: 32rpx;
-  color: #222;
-  font-weight: 600;
-  text-align: center;
-}
-.hr-text {
-  flex: 1;
-  font-size: 28rpx;
-  color: #555;
-}
-.hr-pop {
-  width: 120rpx;
-  text-align: right;
-  font-size: 26rpx;
-  color: #1677FF;
-}
-.hr-wind {
-  width: 120rpx;
-  text-align: right;
-}
-
-.hourly-loading {
-  padding: 80rpx 0;
-}
-
 /* ===== 分钟级降水卡片 ===== */
+.rain-card {
+  position: relative;
+}
+
 .rain-summary {
   display: block;
-  font-size: 30rpx;
-  color: #333;
+  font-size: 28rpx;
+  color: #262626;
   font-weight: 500;
-  margin-bottom: 18rpx;
+  margin-bottom: 14rpx;
 }
+
+.rain-bars-wrap {
+  margin-top: 10rpx;
+}
+
 .rain-bars {
   display: flex;
   align-items: flex-end;
-  height: 110rpx;
+  height: 100rpx;
 }
+
 .rain-bar {
   flex: 1;
   min-width: 2rpx;
@@ -557,138 +726,304 @@
   border-radius: 2rpx 2rpx 0 0;
   transition: height 0.3s ease;
 }
+
 .rain-bar-snow {
   background: linear-gradient(to top, #90A4AE, #ECEFF1);
 }
-.rain-tip {
-  display: block;
-  font-size: 26rpx;
+
+.rain-time-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 20rpx;
+  margin-top: 10rpx;
+}
+
+.rain-empty {
+  padding: 20rpx 0;
+  text-align: center;
+  font-size: 24rpx;
 }
 
 /* ===== 空气质量卡片 ===== */
 .air-row {
   display: flex;
   align-items: center;
+  margin-top: 8rpx;
 }
+
 .air-badge {
-  width: 160rpx;
-  height: 160rpx;
-  border-radius: 24rpx;
+  width: 156rpx;
+  height: 156rpx;
+  border-radius: 20rpx;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   margin-right: 24rpx;
   flex-shrink: 0;
-  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.1);
 }
+
 .air-aqi {
-  font-size: 56rpx;
+  font-size: 54rpx;
   font-weight: 700;
   line-height: 1;
 }
+
 .air-cat {
   font-size: 24rpx;
   margin-top: 8rpx;
+  font-weight: 600;
 }
+
 .air-detail {
   flex: 1;
+  min-width: 0;
 }
+
 .air-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12rpx 0;
+  padding: 10rpx 0;
   border-bottom: 1rpx solid #F0F0F0;
 }
+
 .air-item:last-child {
   border-bottom: none;
 }
+
 .air-label {
-  font-size: 26rpx;
-  color: #999;
+  font-size: 24rpx;
+  color: #8C8C8C;
 }
+
 .air-value {
-  font-size: 28rpx;
-  color: #333;
+  font-size: 26rpx;
+  color: #262626;
+  font-weight: 600;
+}
+
+.air-unit {
+  font-size: 20rpx;
+  color: #8C8C8C;
+  font-weight: 400;
+  margin-left: 2rpx;
+}
+
+/* ===== 台风板块（全新设计） ===== */
+.typhoon-card {
+  padding-bottom: 24rpx;
+}
+
+.typhoon-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.typhoon-status-pill {
+  font-size: 20rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 20rpx;
+  font-weight: 600;
+  letter-spacing: 0.5rpx;
+}
+
+.pill-active {
+  background: #FFF1F0;
+  color: #F5222D;
+  border: 1rpx solid #FFA39E;
+}
+
+.pill-quiet {
+  background: #F6FFED;
+  color: #52C41A;
+  border: 1rpx solid #B7EB8F;
+}
+
+.typhoon-arrow {
+  font-size: 24rpx;
+  color: #8C8C8C;
+}
+
+.typhoon-loading {
+  padding: 30rpx 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: #8C8C8C;
+}
+
+/* 场景一：无活跃台风安心看板 */
+.typhoon-peace-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24rpx 10rpx 8rpx;
+  text-align: center;
+}
+
+.peace-icon-wrap {
+  width: 84rpx;
+  height: 84rpx;
+  border-radius: 50%;
+  background: #F6FFED;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12rpx;
+  border: 1rpx solid rgba(82, 196, 26, 0.25);
+}
+
+.peace-icon {
+  font-size: 42rpx;
+}
+
+.peace-title {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #262626;
+  margin-bottom: 6rpx;
+}
+
+.peace-sub {
+  font-size: 22rpx;
+  color: #8C8C8C;
+  line-height: 1.4;
+}
+
+.history-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  background: #F7F9FC;
+  border: 1rpx solid rgba(0, 0, 0, 0.06);
+  padding: 10rpx 24rpx;
+  border-radius: 24rpx;
+  margin-top: 20rpx;
+  transition: all 0.2s;
+}
+
+.history-toggle-btn:active {
+  background: #EBF2FA;
+}
+
+.history-btn-text {
+  font-size: 22rpx;
+  color: #595959;
   font-weight: 500;
 }
 
-/* ===== 台风板块 ===== */
-.typhoon-card {
-  padding-bottom: 20rpx;
+.history-btn-arrow {
+  font-size: 22rpx;
+  color: #8C8C8C;
 }
-.typhoon-loading,
-.typhoon-empty {
-  padding: 24rpx 0;
-  text-align: center;
+
+/* 场景二：台风列表与详情卡 */
+.typhoon-list-wrap {
+  margin-top: 14rpx;
 }
-.typhoon-hint {
-  padding: 16rpx 4rpx 4rpx;
-  line-height: 1.5;
+
+.typhoon-card-item {
+  border-radius: 18rpx;
+  margin-bottom: 14rpx;
+  border: 1rpx solid rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  background: #F8FAFD;
+  transition: all 0.2s;
 }
-.typhoon-grade-hist {
-  background: #BFBFBF;
+
+.item-active {
+  background: #FFFDF9;
+  border-color: rgba(250, 140, 22, 0.35);
+  box-shadow: 0 4rpx 14rpx rgba(250, 140, 22, 0.08);
 }
-.typhoon-item {
-  border-top: 1rpx solid #F0F0F0;
-  padding-top: 20rpx;
-  margin-top: 16rpx;
+
+.item-hist {
+  background: #FAFAFA;
+  border-color: rgba(0, 0, 0, 0.05);
 }
-.typhoon-item:first-child {
-  border-top: none;
-  margin-top: 8rpx;
-  padding-top: 8rpx;
-}
-.typhoon-brief {
-  cursor: pointer;
-  border-radius: 16rpx;
-  padding: 16rpx;
-  background: rgba(255, 77, 79, 0.05);
-}
-.typhoon-brief:active {
-  background: rgba(255, 77, 79, 0.12);
-}
-.typhoon-brief-top {
+
+.typhoon-item-header {
+  padding: 18rpx 20rpx;
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-.typhoon-name {
-  font-size: 32rpx;
-  font-weight: 700;
-  color: #1A1A1A;
-}
-.typhoon-grade {
-  font-size: 24rpx;
-  font-weight: 700;
-  padding: 4rpx 14rpx;
-  border-radius: 20rpx;
-  color: #fff;
-  background: #999;
-}
-.typhoon-brief-sub {
-  margin-top: 10rpx;
-}
-.typhoon-trend {
-  display: block;
-  margin-top: 8rpx;
-  color: #555;
+  gap: 16rpx;
+  cursor: pointer;
 }
 
-/* 7天预报温度色阶（独立于错误红/主色蓝，语义更清晰） */
-.temp-max {
-  color: #FF7A45;
-  font-weight: 500;
+.t-item-main {
+  flex: 1;
+  min-width: 0;
 }
-.temp-min {
+
+.t-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  flex-wrap: wrap;
+}
+
+.t-name {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1F1F1F;
+}
+
+.t-en-name {
+  font-size: 22rpx;
+  color: #8C8C8C;
+}
+
+.t-num-tag {
+  font-size: 20rpx;
   color: #1677FF;
-  font-weight: 500;
+  background: #E6F4FF;
+  padding: 2rpx 8rpx;
+  border-radius: 6rpx;
+  font-weight: 600;
 }
-.typhoon-expand {
-  display: block;
-  text-align: right;
+
+.t-trend-text {
+  font-size: 22rpx;
+  color: #D46B08;
   margin-top: 6rpx;
+  display: block;
+}
+
+.t-hist-text {
+  font-size: 21rpx;
+  color: #8C8C8C;
+  margin-top: 4rpx;
+  display: block;
+}
+
+.t-item-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6rpx;
+  flex-shrink: 0;
+}
+
+.typhoon-grade-badge {
+  font-size: 20rpx;
+  font-weight: 700;
+  padding: 3rpx 14rpx;
+  border-radius: 16rpx;
+  color: #FFFFFF;
+}
+
+.grade-hist {
+  background: #BFBFBF;
+  color: #FFFFFF;
+}
+
+.t-expand-hint {
+  font-size: 20rpx;
+  color: #8C8C8C;
 }
 
 /* 强度等级配色（grade-{NMC代码}） */
@@ -699,101 +1034,285 @@
 .grade-STY { background: #F5222D !important; color: #fff; }
 .grade-SuperTY { background: #722ED1 !important; color: #fff; }
 
-/* 详情 */
-.typhoon-detail {
-  margin-top: 16rpx;
+/* 4 宫格核心参数仪表盘 */
+.typhoon-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10rpx;
+  padding: 14rpx 18rpx 10rpx;
 }
+
+.t-dash-cell {
+  background: #FFFFFF;
+  border-radius: 12rpx;
+  padding: 12rpx 14rpx;
+  display: flex;
+  flex-direction: column;
+  border: 1rpx solid rgba(0, 0, 0, 0.04);
+}
+
+.dash-label {
+  font-size: 20rpx;
+  color: #8C8C8C;
+  margin-bottom: 4rpx;
+}
+
+.dash-value {
+  font-size: 25rpx;
+  font-weight: 700;
+  color: #262626;
+}
+
+.highlight-wind {
+  color: #F5222D;
+}
+
+.dash-unit {
+  font-size: 20rpx;
+  color: #8C8C8C;
+  font-weight: 400;
+}
+
+/* 风圈说明条 */
+.radii-info-bar {
+  margin: 0 18rpx 12rpx;
+  background: #FFF7E6;
+  border: 1rpx solid #FFE7BA;
+  border-radius: 10rpx;
+  padding: 8rpx 14rpx;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.radii-tag {
+  font-size: 19rpx;
+  font-weight: 700;
+  background: #FA8C16;
+  color: #FFFFFF;
+  padding: 2rpx 8rpx;
+  border-radius: 6rpx;
+  flex-shrink: 0;
+}
+
+.radii-content {
+  font-size: 21rpx;
+  color: #D46B08;
+}
+
+/* 地图容器与图例 */
+.t-map-container {
+  margin: 0 18rpx 14rpx;
+  position: relative;
+  border-radius: 16rpx;
+  overflow: hidden;
+  border: 1rpx solid rgba(0, 0, 0, 0.08);
+}
+
 .typhoon-map {
   width: 100%;
-  height: 420rpx;
-  border-radius: 16rpx;
-  border: 1rpx solid #EEE;
+  height: 380rpx;
 }
-.typhoon-map-legend {
-  margin: 10rpx 0 16rpx;
-}
-.typhoon-detail-grid {
+
+.t-map-legend {
   display: flex;
-  flex-wrap: wrap;
+  gap: 20rpx;
+  padding: 10rpx 16rpx;
+  background: rgba(255, 255, 255, 0.94);
   border-top: 1rpx solid #F0F0F0;
-  padding-top: 12rpx;
+  font-size: 20rpx;
+  color: #595959;
 }
-.typhoon-detail-row {
-  width: 50%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10rpx 6rpx;
-  box-sizing: border-box;
-}
-.typhoon-detail-row-full {
-  width: 100%;
-}
-.detail-label {
-  font-size: 24rpx;
-  color: #999;
-}
-.detail-value {
-  font-size: 26rpx;
-  color: #333;
-  font-weight: 500;
-  text-align: right;
-}
-.typhoon-path-title {
-  margin: 14rpx 0 8rpx;
-}
-.typhoon-path-list {
-  border-top: 1rpx solid #F0F0F0;
-}
-.typhoon-path-item {
+
+.legend-chip {
   display: flex;
   align-items: center;
-  padding: 12rpx 0;
-  border-bottom: 1rpx solid #F5F5F5;
-  font-size: 24rpx;
-  color: #555;
+  gap: 8rpx;
 }
-.tp-time { width: 150rpx; color: #333; }
-.tp-grade {
-  width: 130rpx;
+
+.legend-line {
+  width: 24rpx;
+  height: 4rpx;
+  border-radius: 2rpx;
+}
+
+.line-solid {
+  background: #FF4D4F;
+}
+
+.line-dashed {
+  background: #FFA940;
+  border-top: 2rpx dashed #FFA940;
+  height: 0;
+}
+
+/* 近期轨迹时间轴 */
+.t-timeline-section {
+  padding: 0 18rpx 14rpx;
+}
+
+.t-timeline-title {
   font-size: 22rpx;
   font-weight: 700;
-  padding: 2rpx 10rpx;
-  border-radius: 16rpx;
-  text-align: center;
+  color: #595959;
+  margin-bottom: 8rpx;
+}
+
+.t-timeline-list {
+  background: #FFFFFF;
+  border-radius: 12rpx;
+  border: 1rpx solid rgba(0, 0, 0, 0.04);
+  padding: 8rpx 14rpx;
+}
+
+.t-timeline-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10rpx 0;
+  border-bottom: 1rpx solid #F5F5F5;
+  font-size: 21rpx;
+}
+
+.t-timeline-item:last-child {
+  border-bottom: none;
+}
+
+.timeline-dot {
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background: #1677FF;
+  margin-right: 8rpx;
+}
+
+.timeline-time {
+  color: #262626;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-grade {
+  font-size: 19rpx;
+  padding: 2rpx 8rpx;
+  border-radius: 6rpx;
   color: #fff;
 }
-.tp-pos { flex: 1; }
-.tp-wind { width: 220rpx; text-align: right; color: #888; }
 
-/* ===== 天文信息卡片 ===== */
-.astro-grid {
+.timeline-pos {
+  color: #8C8C8C;
+}
+
+.timeline-meta {
+  color: #595959;
+  font-weight: 600;
+}
+
+/* ===== 天文信息卡片（双面板：太阳 | 月亮） ===== */
+.astro-row {
   display: flex;
-  flex-wrap: wrap;
-  margin-top: 10rpx;
+  gap: 16rpx;
+  margin-top: 12rpx;
 }
-.astro-item {
-  width: 25%;
-  text-align: center;
-  padding: 16rpx 0;
+.astro-panel {
+  flex: 1;
+  min-width: 0;
+  border-radius: 20rpx;
+  padding: 20rpx 18rpx;
   box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
 }
-.astro-item-full {
-  width: 100%;
+.astro-panel-sun {
+  background: linear-gradient(160deg, #FFF8EC 0%, #FFE9C2 100%);
+  border: 1rpx solid rgba(255, 186, 74, 0.25);
+  box-shadow: 0 4rpx 14rpx rgba(255, 170, 60, 0.08);
 }
-.astro-icon {
-  font-size: 36rpx;
-  display: block;
+.astro-panel-moon {
+  background: linear-gradient(160deg, #F0F4FA 0%, #DCE4F2 100%);
+  border: 1rpx solid rgba(130, 155, 200, 0.22);
+  box-shadow: 0 4rpx 14rpx rgba(80, 100, 150, 0.08);
 }
-.astro-label {
-  display: block;
-  font-size: 22rpx;
-  color: #999;
-  margin: 4rpx 0;
+.astro-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
 }
-.astro-value {
-  display: block;
-  font-size: 28rpx;
-  font-weight: 500;
+.astro-panel-icon {
+  font-size: 44rpx;
+  line-height: 1;
+}
+.astro-panel-meta { display: flex; flex-direction: column; }
+.astro-panel-name {
+  font-size: 26rpx;
+  font-weight: 600;
   color: #333;
+}
+.astro-panel-sub {
+  font-size: 20rpx;
+  color: #6b6357;
+  margin-top: 2rpx;
+}
+.astro-line {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 8rpx 0;
+}
+.astro-line-icon { font-size: 28rpx; line-height: 1; }
+.astro-line-text {
+  display: flex;
+  align-items: baseline;
+  gap: 8rpx;
+  flex: 1;
+  min-width: 0;
+}
+.astro-line-label {
+  font-size: 22rpx;
+  color: #8a8275;
+}
+.astro-line-value {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #2a2520;
+  font-variant-numeric: tabular-nums;
+}
+.astro-bar {
+  margin-top: 14rpx;
+  height: 8rpx;
+  border-radius: 6rpx;
+  background: rgba(255, 255, 255, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+.astro-bar-fill-sun {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 50%;
+  background: linear-gradient(90deg, #FFB347 0%, #FF8C42 100%);
+  border-radius: 6rpx;
+}
+.astro-bar-cap {
+  position: absolute;
+  top: -4rpx;
+  width: 16rpx; height: 16rpx;
+  border-radius: 50%;
+  background: #fff;
+  border: 2rpx solid #FF8C42;
+  transform: translateX(-50%);
+}
+.astro-phase {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-top: 14rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx dashed rgba(255, 255, 255, 0.6);
+}
+.astro-phase-icon { font-size: 32rpx; line-height: 1; }
+.astro-phase-name {
+  font-size: 24rpx;
+  color: #4a4458;
+  font-weight: 500;
 }

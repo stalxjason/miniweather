@@ -56,6 +56,32 @@ function extractExtremes(times, heights) {
   return result;
 }
 
+// 平滑曲线：相邻点中点作控制点的三次贝塞尔
+function traceSmoothCurve(ctx, pts) {
+  if (!pts || pts.length === 0) return;
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) {
+    const p = pts[i - 1], c = pts[i];
+    const mx = (p.x + c.x) / 2;
+    ctx.bezierCurveTo(mx, p.y, mx, c.y, c.x, c.y);
+  }
+}
+
+// 绘制圆角矩形（用于“现在”标签气泡）
+function drawRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
 // 两坐标间距离（haversine，单位 km）—— 用于「按距离选海岸监测点」
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371; // 地球半径 km
@@ -123,6 +149,12 @@ Page({
     tideTable: [],
     tideHourly: [],
     yAxisLabels: [],
+    chartWidth: 1152,
+    chartHeight: 180,
+    tideChartImg: '',
+    chartScrollLeft: 0,
+    isNowDay: false,
+    activeTipTab: 'ganhai',   // Tips 当前激活的选项卡: 'ganhai' | 'chaoxi' | 'haidiao'
     chartMaxHeight: 300,
     nowScrollId: '',
     loading: true,
@@ -204,10 +236,15 @@ Page({
       const d = new Date();
       d.setDate(d.getDate() + i);
       const date = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+      const status = util.calcTideStatus(d);
       dates.push({
         date: date,
         displayDate: `${d.getMonth() + 1}/${d.getDate()}`,
-        weekDay: i === 0 ? '今天' : (i === 1 ? '明天' : util.getWeekDay(util.formatDate(d)))
+        weekDay: i === 0 ? '今天' : (i === 1 ? '明天' : util.getWeekDay(util.formatDate(d))),
+        tideLevel: status.tideLevel,
+        tideXun: status.tideXun,
+        tideText: status.tideText,
+        tideClass: status.tideClass
       });
     }
     this.setData({
@@ -235,6 +272,26 @@ Page({
       }
       if (pairs.length === 0) throw new Error('无潮汐数据');
 
+      // 从 9 天连续数据中提取各日期的实际日潮差，并微调更新 dates 的潮汐状态
+      const updatedDates = this.data.dates.map(item => {
+        const pfx = `${item.date.slice(0, 4)}-${item.date.slice(4, 6)}-${item.date.slice(6, 8)}`;
+        const dayHs = pairs.filter(p => p.time.indexOf(pfx) === 0).map(p => p.height);
+        let dRange = null;
+        if (dayHs.length > 0) {
+          dRange = Math.max(...dayHs) - Math.min(...dayHs);
+        }
+        const y = +item.date.slice(0, 4), m = +item.date.slice(4, 6), d = +item.date.slice(6, 8);
+        const dt = new Date(y, m - 1, d);
+        const status = util.calcTideStatus(dt, dRange);
+        return {
+          ...item,
+          tideLevel: status.tideLevel,
+          tideXun: status.tideXun,
+          tideText: status.tideText,
+          tideClass: status.tideClass
+        };
+      });
+
       // 选中日 yyyy-MM-dd 前缀：从 ±1 天缓冲数据中筛出当天的曲线与极值
       const dayPrefix = `${selectedDate.slice(0, 4)}-${selectedDate.slice(4, 6)}-${selectedDate.slice(6, 8)}`;
 
@@ -248,16 +305,25 @@ Page({
       const dayPairs = pairs.filter(p => p.time.indexOf(dayPrefix) === 0);
       const tideHourly = dayPairs.map(p => ({ fxTime: p.time, height: p.height }));
 
-      // 计算图表数据（基于当天）
-      const heights = tideHourly.map(h => h.height);
-      const maxH = Math.max(...heights, 1);
-      const minH = Math.min(...heights, 0);
+      // 记录站点时区偏移量，供绘制当前时间标识使用
+      this._utcOffsetSeconds = res.utcOffsetSeconds || 0;
 
-      // Y轴标签
+      // 计算图表数据（基于当天实际最高与最低潮位动态定标）
+      const heights = tideHourly.map(h => h.height);
+      let maxH = Math.max(...heights);
+      let minH = Math.min(...heights);
+      if (maxH === minH) {
+        maxH += 0.5;
+        minH -= 0.5;
+      }
+      const diff = maxH - minH;
+
+      // Y轴标签（5个等分刻度）
       const yLabels = [];
+      const prec = diff < 1.5 ? 2 : 1;
       for (let i = 4; i >= 0; i--) {
-        const val = minH + (maxH - minH) * i / 4;
-        yLabels.push(val.toFixed(1) + 'm');
+        const val = minH + diff * i / 4;
+        yLabels.push(val.toFixed(prec) + 'm');
       }
 
       // 找到满潮/干潮对应的小时
@@ -266,9 +332,14 @@ Page({
         tideTypeMap[this.formatHour(t.fxTime)] = t.type;
       });
 
-      // 当前时间标记：仅当选中日期为“今天”时，高亮对应小时柱并自动滚到该列
+      // 当前时间标记：仅当选中日期为“今天”时有效
       const isNowDay = selectedDate === util.getTodayStr();
-      const nowHour = isNowDay ? String(new Date().getHours()).padStart(2, '0') : '';
+      let nowHour = '';
+      if (isNowDay) {
+        const offMin = Math.round((res.utcOffsetSeconds || 0) / 60);
+        const now = new Date();
+        nowHour = String(new Date(now.getTime() + (now.getTimezoneOffset() + offMin) * 60000).getHours()).padStart(2, '0');
+      }
 
       const processedHourly = tideHourly.map(h => {
         const hour = this.formatHour(h.fxTime);
@@ -276,8 +347,8 @@ Page({
           ...h,
           hour,
           isNow: isNowDay && hour === nowHour,
-          barHeight: ((h.height - minH) / (maxH - minH || 1)) * this.data.chartMaxHeight,
-          barPercent: ((h.height - minH) / (maxH - minH || 1)) * 100,
+          barHeight: ((h.height - minH) / (diff || 1)) * 300,
+          barPercent: ((h.height - minH) / (diff || 1)) * 100,
           type: tideTypeMap[hour] || ''
         };
       });
@@ -308,9 +379,11 @@ Page({
       }
 
       this.setData({
+        dates: updatedDates,
         tideTable,
         tideHourly: processedHourly,
         yAxisLabels: yLabels,
+        isNowDay,
         nowScrollId: isNowDay ? 'bar-' + nowHour : '',
         error: false,
         loading: false,
@@ -319,6 +392,10 @@ Page({
         tideSnapDist,
         // 顶部 station-name 同步为实际数据来源的海岸点名称，让用户一眼看到当前展示的是哪
         'location.name': (res.snapped && tideSnapName) ? tideSnapName : this.data.location.name
+      }, () => {
+        wx.nextTick(() => {
+          this.drawTideChart();
+        });
       });
     } catch (err) {
       console.error('获取潮汐数据失败:', err);
@@ -373,6 +450,14 @@ Page({
 
   closeStationPicker() {
     this.setData({ stationPickerShow: false, showSearch: false, searchResults: [], searchKeyword: '' });
+  },
+
+  // 切换 Tips 选项卡（赶海 / 潮汐 / 海钓）
+  switchTipTab(e) {
+    const tab = e.currentTarget.dataset.tab;
+    if (tab && tab !== this.data.activeTipTab) {
+      this.setData({ activeTipTab: tab });
+    }
   },
 
   // 点击右侧快速索引：展开对应省份并滚动定位到该省份
@@ -463,5 +548,250 @@ Page({
     const d = util.parseTime(isoStr);
     if (!d) return '--';
     return String(d.getHours()).padStart(2, '0');
+  },
+
+  _setupCanvas(id, cb) {
+    this.createSelectorQuery().select('#' + id).fields({ node: true, size: true }).exec((res) => {
+      if (!res || !res[0] || !res[0].node) return;
+      const { node, width, height } = res[0];
+      if (!width || !height) return;
+      const dpr = Math.min(wx.getWindowInfo ? (wx.getWindowInfo().pixelRatio || 2) : 2, 2);
+      node.width = width * dpr;
+      node.height = height * dpr;
+      const ctx = node.getContext('2d');
+      ctx.scale(dpr, dpr);
+      cb(ctx, width, height, node);
+    });
+  },
+
+  drawTideChart() {
+    const list = this.data.tideHourly;
+    if (!list || !list.length) return;
+
+    this._setupCanvas('tideCanvas', (ctx, w, h, node) => {
+      const heights = list.map(x => x.height);
+      let maxH = Math.max(...heights);
+      let minH = Math.min(...heights);
+      if (maxH === minH) {
+        maxH += 0.5;
+        minH -= 0.5;
+      }
+      const diff = maxH - minH;
+
+      const padT = 36;
+      const padB = 32;
+      const padL = 24;
+      const padR = 24;
+      const colW = 48;
+      const drawH = h - padT - padB;
+
+      // 1. 生成 24 个整点小时节点
+      const pts = list.map((item, i) => {
+        const x = padL + i * colW;
+        const y = padT + ((maxH - item.height) / diff) * drawH;
+        return {
+          x,
+          y,
+          height: item.height,
+          hour: item.hour,
+          type: item.type
+        };
+      });
+
+      // 2. 清空画布
+      ctx.clearRect(0, 0, w, h);
+
+      // 3. 绘制 5 条水平参考虚线
+      for (let i = 0; i <= 4; i++) {
+        const gy = padT + (drawH * i) / 4;
+        ctx.beginPath();
+        ctx.setLineDash([3, 4]);
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)';
+        ctx.lineWidth = 1;
+        ctx.moveTo(padL, gy);
+        ctx.lineTo(w - padR, gy);
+        ctx.stroke();
+      }
+
+      // X 轴基准线
+      ctx.beginPath();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.lineWidth = 1;
+      ctx.moveTo(padL, h - padB);
+      ctx.lineTo(w - padR, h - padB);
+      ctx.stroke();
+
+      // 4. 绘制渐变海蓝色填充区域
+      const grad = ctx.createLinearGradient(0, padT, 0, h - padB);
+      grad.addColorStop(0, 'rgba(22, 119, 255, 0.28)');
+      grad.addColorStop(0.5, 'rgba(22, 119, 255, 0.12)');
+      grad.addColorStop(1, 'rgba(22, 119, 255, 0.02)');
+      ctx.beginPath();
+      traceSmoothCurve(ctx, pts);
+      ctx.lineTo(pts[pts.length - 1].x, h - padB);
+      ctx.lineTo(pts[0].x, h - padB);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // 5. 绘制平滑潮汐曲线
+      ctx.beginPath();
+      traceSmoothCurve(ctx, pts);
+      ctx.strokeStyle = '#1677FF';
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+
+      // 6. 绘制常规节点小圆点
+      pts.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#91CAFF';
+        ctx.fill();
+      });
+
+      // 7. 满潮 / 干潮极值点与文字标注
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      pts.forEach(p => {
+        if (p.type === 'H') {
+          // 满潮
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = '#1677FF';
+          ctx.fill();
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.font = 'bold 10px sans-serif';
+          ctx.fillStyle = '#1677FF';
+          ctx.fillText(`满潮 ${p.height}m`, p.x, p.y - 12);
+        } else if (p.type === 'L') {
+          // 干潮
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = '#00A389';
+          ctx.fill();
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.font = 'bold 10px sans-serif';
+          ctx.fillStyle = '#00A389';
+          ctx.fillText(`干潮 ${p.height}m`, p.x, p.y + 14);
+        }
+      });
+
+      // 8. 标识当前时间（仅当天有效）
+      const isNowDay = this.data.isNowDay;
+      let nowX = -1;
+      let nowHourStr = '';
+      if (isNowDay) {
+        const offMin = Math.round((this._utcOffsetSeconds || 0) / 60);
+        const now = new Date();
+        const stationNow = new Date(now.getTime() + (now.getTimezoneOffset() + offMin) * 60000);
+        const curH = stationNow.getHours();
+        const curM = stationNow.getMinutes();
+        nowHourStr = String(curH).padStart(2, '0');
+
+        const fracH = curH + curM / 60;
+        if (fracH >= 0 && fracH <= 23) {
+          nowX = padL + fracH * colW;
+          const idx = Math.floor(fracH);
+          const ratio = fracH - idx;
+          const nextIdx = Math.min(idx + 1, 23);
+          const nowY = pts[idx].y + (pts[nextIdx].y - pts[idx].y) * ratio;
+          const curHeightVal = pts[idx].height + (pts[nextIdx].height - pts[idx].height) * ratio;
+
+          // 绘制垂直指示虚线
+          ctx.beginPath();
+          ctx.setLineDash([3, 3]);
+          ctx.strokeStyle = '#FA8C16';
+          ctx.lineWidth = 1.5;
+          ctx.moveTo(nowX, padT - 18);
+          ctx.lineTo(nowX, h - padB);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // 绘制发光光晕与当前点
+          ctx.beginPath();
+          ctx.arc(nowX, nowY, 6, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(250, 140, 22, 0.28)';
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(nowX, nowY, 3.5, 0, Math.PI * 2);
+          ctx.fillStyle = '#FA8C16';
+          ctx.fill();
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // 绘制“现在”气泡标签
+          const tagText = `现在 ${curHeightVal.toFixed(2)}m`;
+          ctx.font = 'bold 10px sans-serif';
+          const tw = ctx.measureText(tagText).width;
+          const cw = tw + 12;
+          const ch = 18;
+          let cx = nowX - cw / 2;
+          cx = Math.max(padL, Math.min(w - padR - cw, cx));
+          let cy = nowY - 24;
+          if (cy < padT - 18) cy = padT - 18;
+
+          ctx.fillStyle = '#FA8C16';
+          drawRoundRect(ctx, cx, cy, cw, ch, ch / 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#FFFFFF';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(tagText, cx + cw / 2, cy + ch / 2);
+        }
+      }
+
+      // 9. X 轴时间刻度标签（每小时一个节点）
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      pts.forEach(p => {
+        const isCur = isNowDay && p.hour === nowHourStr;
+        // 短刻度线
+        ctx.beginPath();
+        ctx.setLineDash([]);
+        ctx.strokeStyle = isCur ? '#FA8C16' : 'rgba(0, 0, 0, 0.15)';
+        ctx.lineWidth = 1;
+        ctx.moveTo(p.x, h - padB);
+        ctx.lineTo(p.x, h - padB + 4);
+        ctx.stroke();
+
+        ctx.font = isCur ? 'bold 11px sans-serif' : '10px sans-serif';
+        ctx.fillStyle = isCur ? '#FA8C16' : '#8C8C8C';
+        ctx.fillText(p.hour + ':00', p.x, h - padB + 16);
+      });
+
+      // 10. 导出为临时图片供 <image> 展示
+      wx.canvasToTempFilePath({
+        canvas: node,
+        destWidth: node.width,
+        destHeight: node.height,
+        success: (res) => {
+          let scrollLeft = 0;
+          if (nowX >= 0) {
+            const winW = wx.getWindowInfo ? (wx.getWindowInfo().windowWidth || 375) : 375;
+            const viewW = winW - 70;
+            scrollLeft = Math.max(0, Math.round(nowX - viewW / 2));
+          }
+          this.setData({
+            tideChartImg: res.tempFilePath,
+            chartScrollLeft: scrollLeft
+          });
+        },
+        fail: (err) => {
+          console.warn('潮汐曲线导出图片失败:', err && err.errMsg);
+        }
+      });
+    });
   }
 });

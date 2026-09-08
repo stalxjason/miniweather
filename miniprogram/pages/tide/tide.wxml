@@ -1,14 +1,36 @@
 <!-- pages/tide/tide.wxml - 潮汐表页面 -->
 <view class="container">
-  <!-- 顶部 -->
+  <!-- 顶部沉浸式海岸监测点头部 -->
   <view class="tide-hero">
-    <view class="tide-hero-title">🌊 潮汐表</view>
-    <view class="station-info" bindtap="openStationPicker" wx:if="{{!showSearch}}">
-      <text class="station-name">{{location.name}}</text>
-      <text class="text-sm" style="color:rgba(255,255,255,0.7)">切换地点 ›</text>
+    <view class="hero-station-row" bindtap="openStationPicker">
+      <view class="station-main">
+        <view class="station-name-wrap">
+          <text class="station-icon">📍</text>
+          <text class="station-name">{{location.name || '海岸监测点'}}</text>
+        </view>
+        <!-- 状态标签：智能呈现当前定位、自选点位或就近海岸吸附信息 -->
+        <view class="station-tags">
+          <view class="status-chip chip-location" wx:if="{{locationFromWeather}}">
+            <text class="chip-icon">🎯</text>
+            <text>当前定位</text>
+          </view>
+          <view class="status-chip chip-custom" wx:else>
+            <text class="chip-icon">📌</text>
+            <text>自选监测点</text>
+          </view>
+          <view class="status-chip chip-snap" wx:if="{{tideSnapped}}">
+            <text class="chip-icon">⚓</text>
+            <text>就近海岸 · 距您{{tideSnapDist || '近海'}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 切换地点胶囊按钮 -->
+      <view class="switch-station-btn">
+        <text class="switch-btn-text">切换港口</text>
+        <text class="switch-btn-arrow">›</text>
+      </view>
     </view>
-    <view class="follow-hint" wx:if="{{locationFromWeather && !showSearch}}">默认跟随当前定位（精确坐标），点上方可单独设置</view>
-    <view class="snap-hint" wx:if="{{tideSnapped && !showSearch}}">⚓ 已就近吸附到海岸监测点：{{tideSnapName}}（距您{{tideSnapDist}}）</view>
   </view>
 
   <!-- 日期选择 -->
@@ -23,6 +45,11 @@
       >
         <text class="date-tab-day">{{item.weekDay}}</text>
         <text class="date-tab-date">{{item.displayDate}}</text>
+        <view class="date-tab-tide {{item.tideClass}}">
+          <text class="tide-badge-level">{{item.tideLevel}}</text>
+          <text class="tide-badge-sep">·</text>
+          <text class="tide-badge-xun">{{item.tideXun}}</text>
+        </view>
       </view>
     </scroll-view>
   </view>
@@ -41,39 +68,38 @@
     <view class="retry-btn" bindtap="retryFetchTide" hover-class="retry-btn-hover">重新加载</view>
   </view>
 
-  <!-- 潮汐概览 -->
-  <view class="card" wx:if="{{!loading && tideTable.length > 0}}">
-    <view class="card-title">潮汐概览</view>
-    <view class="tide-summary">
-      <view class="tide-summary-item" wx:for="{{tideTable}}" wx:key="fxTime">
-        <view class="tide-type-tag {{item.type === 'H' ? 'tag-blue' : 'tag-orange'}}">
-          {{item.type === 'H' ? '满潮' : '干潮'}}
+  <!-- 潮汐概览（紧凑布局） -->
+  <view class="card tide-overview-card" wx:if="{{!loading && tideTable.length > 0}}">
+    <view class="overview-header flex-between">
+      <view class="card-title" style="margin-bottom:0;">潮汐概览</view>
+      <text class="overview-tip text-muted">今日 {{tideTable.length}} 次潮位极值</text>
+    </view>
+    <view class="tide-summary-grid">
+      <view class="tide-summary-cell" wx:for="{{tideTable}}" wx:key="fxTime">
+        <view class="cell-head">
+          <text class="cell-badge {{item.type === 'H' ? 'badge-high' : 'badge-low'}}">{{item.type === 'H' ? '满潮' : '干潮'}}</text>
+          <text class="cell-time">{{item.timeStr}}</text>
         </view>
-        <text class="tide-time">{{item.timeStr}}</text>
-        <text class="tide-height">{{item.height}}m</text>
+        <view class="cell-val">
+          <text class="cell-num">{{item.height}}</text>
+          <text class="cell-unit">m</text>
+        </view>
       </view>
     </view>
   </view>
 
-  <!-- 24小时潮汐图表 -->
+  <!-- 24小时潮汐曲线图表 -->
   <view class="card" wx:if="{{!loading && tideHourly.length > 0}}">
     <view class="card-title">24小时潮汐变化</view>
     <view class="tide-chart">
+      <!-- 左侧固定的 Y 轴标尺 -->
       <view class="chart-y-axis">
         <text wx:for="{{yAxisLabels}}" wx:key="*this" class="y-label">{{item}}</text>
       </view>
-      <scroll-view class="chart-area" scroll-x enable-flex scroll-with-animation scroll-into-view="{{nowScrollId}}">
-        <view
-          class="chart-bar-wrap {{item.isNow ? 'chart-bar-now' : ''}}"
-          id="bar-{{item.hour}}"
-          wx:for="{{tideHourly}}"
-          wx:key="fxTime"
-          style="height: {{chartMaxHeight}}rpx;"
-        >
-          <view wx:if="{{item.isNow}}" class="now-dot"></view>
-          <view class="chart-bar" style="height: {{item.barHeight}}rpx; background: {{item.isNow ? '#FA8C16' : (item.type === 'H' ? '#1677FF' : '#91CAFF')}};">
-          </view>
-          <text class="chart-time {{item.isNow ? 'chart-time-now' : ''}}">{{item.isNow ? '现在' : item.hour}}</text>
+      <!-- 右侧横向滚动的曲线图 -->
+      <scroll-view class="chart-area" scroll-x scroll-left="{{chartScrollLeft}}" scroll-with-animation>
+        <view class="chart-inner" style="width: {{chartWidth}}px; height: {{chartHeight}}px;">
+          <image class="tide-curve-img" wx:if="{{tideChartImg}}" src="{{tideChartImg}}" style="width: {{chartWidth}}px; height: {{chartHeight}}px;" mode="scaleToFill"></image>
         </view>
       </scroll-view>
     </view>
@@ -87,19 +113,140 @@
         <view class="legend-dot legend-low"></view>
         <text>干潮</text>
       </view>
+      <view class="legend-item" wx:if="{{isNowDay}}">
+        <view class="legend-dot legend-now"></view>
+        <text>当前时间</text>
+      </view>
     </view>
   </view>
 
-  <!-- 小时详情列表 -->
-  <view class="card" wx:if="{{!loading && tideHourly.length > 0}}">
-    <view class="card-title">逐时潮高</view>
-    <view class="hourly-list">
-      <view class="hourly-item flex-between {{item.isNow ? 'hourly-item-now' : ''}}" wx:for="{{tideHourly}}" wx:key="fxTime">
-        <text class="hourly-time {{item.isNow ? 'hourly-time-now' : ''}}">{{item.isNow ? '现在' : item.hour + ':00'}}</text>
-        <view class="hourly-bar-wrap">
-          <view class="hourly-bar" style="width: {{item.barPercent}}%; background: {{item.isNow ? '#FA8C16' : (item.type === 'H' ? '#1677FF' : '#91CAFF')}};"></view>
+  <!-- 海洋实用指南 Tips -->
+  <view class="card tips-card">
+    <view class="card-title">💡 实用指南</view>
+    <!-- 3个内容块切换标签 -->
+    <view class="tips-tabs">
+      <view
+        class="tips-tab {{activeTipTab === 'ganhai' ? 'tips-tab-active' : ''}}"
+        bindtap="switchTipTab"
+        data-tab="ganhai"
+      >
+        <text class="tips-tab-icon">🦀</text>
+        <text class="tips-tab-text">赶海指南</text>
+      </view>
+      <view
+        class="tips-tab {{activeTipTab === 'chaoxi' ? 'tips-tab-active' : ''}}"
+        bindtap="switchTipTab"
+        data-tab="chaoxi"
+      >
+        <text class="tips-tab-icon">🌊</text>
+        <text class="tips-tab-text">潮汐常识</text>
+      </view>
+      <view
+        class="tips-tab {{activeTipTab === 'haidiao' ? 'tips-tab-active' : ''}}"
+        bindtap="switchTipTab"
+        data-tab="haidiao"
+      >
+        <text class="tips-tab-icon">🎣</text>
+        <text class="tips-tab-text">海钓技巧</text>
+      </view>
+    </view>
+
+    <!-- 内容块 1：赶海指南 -->
+    <view class="tips-content" wx:if="{{activeTipTab === 'ganhai'}}">
+      <view class="tip-section">
+        <view class="tip-section-title"><text class="tip-dot">●</text> 黄金时机与窗口</view>
+        <view class="tip-item">
+          <text class="tip-tag tag-orange">最佳时间</text>
+          <text class="tip-desc">以低潮（干潮）为基准，<text class="tip-highlight">低潮前1小时至低潮后1小时</text>是最理想友好的赶海窗口，建议提前到达边等退潮边观察地形。</text>
         </view>
-        <text class="hourly-height">{{item.height}}m</text>
+        <view class="tip-item">
+          <text class="tip-tag tag-blue">潮差评估</text>
+          <text class="tip-desc">潮差越大退得越远、裸露滩涂越多；但涨潮速度也会更快，务必时刻关注退路安全。</text>
+        </view>
+      </view>
+
+      <view class="tip-section">
+        <view class="tip-section-title"><text class="tip-dot">●</text> 装备与选址原则</view>
+        <view class="tip-item">
+          <text class="tip-tag tag-green">必备防护</text>
+          <text class="tip-desc">穿<text class="tip-bold">涉水鞋或防滑胶鞋</text>严防蚝壳与碎石割伤；戴手套与夹子翻石捉蟹，切勿徒手伸入岩石缝隙。</text>
+        </view>
+        <view class="tip-item">
+          <text class="tip-tag tag-green">安全选址</text>
+          <text class="tip-desc">新手首选平缓沙滩、浅滩或景区开放海岸；远离深泥沼、外海孤立礁石及潮沟，切勿进入养殖区与航道。</text>
+        </view>
+      </view>
+
+      <!-- 安全警示 -->
+      <view class="tip-warning-box">
+        <view class="warning-title">⚠️ 撤离铁律：涨潮前30~60分钟必须返程</view>
+        <view class="warning-desc">无论收获多少，在涨潮前30到60分钟必须停止赶海往岸边撤回！如发觉脚底滩涂变软、潮沟流速加快或海水边缘快速逼近，立即撤离切勿逗留。</view>
+      </view>
+    </view>
+
+    <!-- 内容块 2：潮汐常识 -->
+    <view class="tips-content" wx:if="{{activeTipTab === 'chaoxi'}}">
+      <view class="tip-section">
+        <view class="tip-section-title"><text class="tip-dot">●</text> 潮汐基本概念</view>
+        <view class="tip-item">
+          <text class="tip-tag tag-blue">高潮(满潮)</text>
+          <text class="tip-desc">海水涨到相对高位；退潮到达最低点的时刻称为<text class="tip-bold">低潮(干潮)</text>。低潮前为退潮阶段，低潮后转为涨潮。</text>
+        </view>
+        <view class="tip-item">
+          <text class="tip-tag tag-blue">潮差概念</text>
+          <text class="tip-desc">高潮位与低潮位的高度落差。潮差越大，当天海水涨退幅度越显著，水流也相对更急。</text>
+        </view>
+      </view>
+
+      <view class="tip-section">
+        <view class="tip-section-title"><text class="tip-dot">●</text> 如何看懂潮汐曲线图</view>
+        <view class="tip-item">
+          <text class="tip-tag tag-orange">曲线走向</text>
+          <text class="tip-desc">曲线向上延伸表示正在<text class="tip-highlight">涨潮</text>，向下延伸表示正在<text class="tip-highlight">退潮</text>；波峰峰顶对应高潮，波谷底部对应低潮。</text>
+        </view>
+        <view class="tip-item">
+          <text class="tip-tag tag-orange">看表口诀</text>
+          <text class="tip-desc"><text class="tip-bold">先看低潮和高潮时间，再看潮差大小</text>。赶海盯紧低潮谷底前后，海钓重点看潮水流动的涨退转折期。</text>
+        </view>
+      </view>
+
+      <!-- 安全警示 -->
+      <view class="tip-warning-box">
+        <view class="warning-title">⚠️ 气象与海况综合研判</view>
+        <view class="warning-desc">潮汐表为天文潮位预报，实际潮高会受大风、降雨、气压与风暴潮叠加影响。雷雨、大雾或风浪预警时请勿出海活动。</view>
+      </view>
+    </view>
+
+    <!-- 内容块 3：海钓技巧 -->
+    <view class="tips-content" wx:if="{{activeTipTab === 'haidiao'}}">
+      <view class="tip-section">
+        <view class="tip-section-title"><text class="tip-dot">●</text> 潮汐与鱼口时机</view>
+        <view class="tip-item">
+          <text class="tip-tag tag-blue">觅食动向</text>
+          <text class="tip-desc">涨潮时水流将浮游生物和小鱼虾冲向近岸，鱼群进浅滩觅食；退潮时潮沟与暗礁交界处是伏击摄食聚集点。</text>
+        </view>
+        <view class="tip-item">
+          <text class="tip-tag tag-orange">黄金窗口</text>
+          <text class="tip-desc">重点把握<text class="tip-highlight">低潮转涨（初涨水）、涨半潮与高潮前后</text>等水流流动节奏发生变化的时段；水流停滞的平潮期通常口稀。</text>
+        </view>
+      </view>
+
+      <view class="tip-section">
+        <view class="tip-section-title"><text class="tip-dot">●</text> 钓点选择与装备</view>
+        <view class="tip-item">
+          <text class="tip-tag tag-green">选位三准则</text>
+          <text class="tip-desc"><text class="tip-bold">站位安全、抛投空间足、撤离方便</text>。初学宜选港内开阔水面、防波堤内侧或沙滩缓坡；严禁进入航道与养殖区。</text>
+        </view>
+        <view class="tip-item">
+          <text class="tip-tag tag-green">入门装备</text>
+          <text class="tip-desc">初学者从简配置：单支轻量海竿/路亚竿、基础线组、剪线钳与鱼桶；防波堤作钓需备好长柄抄网。</text>
+        </view>
+      </view>
+
+      <!-- 安全警示 -->
+      <view class="tip-warning-box">
+        <view class="warning-title">⚠️ 垂钓安全铁律：安全永远大于鱼获</view>
+        <view class="warning-desc">湿滑礁石、外海浪涌和夜钓危险系数极高！登礁或夜钓必须穿戴救生衣、防滑钉鞋与高亮头灯。遇大浪或雷雨坚决取消行程。</view>
       </view>
     </view>
   </view>
@@ -172,4 +319,7 @@
       </view>
     </view>
   </view>
+
+  <!-- 离屏画布：绘制 24 小时潮汐平滑曲线并导出为图片，保证滚动跟手流畅 -->
+  <canvas type="2d" id="tideCanvas" class="canvas-buffer" style="width: {{chartWidth}}px; height: {{chartHeight}}px;"></canvas>
 </view>

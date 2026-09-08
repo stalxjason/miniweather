@@ -1,7 +1,5 @@
 {
   "navigationBarTitleText": "选择城市",
   "navigationStyle": "custom",
-  "usingComponents": {
-    "privacy-popup": "/components/privacy-popup/privacy-popup"
-  }
+  "usingComponents": {}
 }

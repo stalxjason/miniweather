@@ -76,13 +76,14 @@ function doRequest(url) {
   });
 }
 
+// t= 为缓存穿透参数：随调用时间生成（模块加载时只求值一次的话，实例存活期间永远不变，失效）
 const ts = () => Date.now();
-const LIST_URL = `https://typhoon.nmc.cn/weatherservice/typhoon/jsons/list_default?t=${ts()}&callback=typhoon_jsons_list_default`;
+const listUrl = () => `https://typhoon.nmc.cn/weatherservice/typhoon/jsons/list_default?t=${ts()}&callback=typhoon_jsons_list_default`;
 const viewUrl = (id) => `https://typhoon.nmc.cn/weatherservice/typhoon/jsons/view_${id}?t=${ts()}&callback=typhoon_jsons_view_${id}`;
 
 async function getList() {
   return cached('nmc_list', 300000, async () => {
-    const j = await doRequest(LIST_URL);
+    const j = await doRequest(listUrl());
     return (j && j.typhoonList) || [];
   });
 }
