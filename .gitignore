@@ -18,3 +18,7 @@ project.private.config.json
 
 # ZCode 运行时目录
 .zcode/
+
+# Python
+__pycache__/
+*.pyc
