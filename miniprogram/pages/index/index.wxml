@@ -12,10 +12,11 @@
 
       <block wx:if="{{now}}">
         <!-- 气象预警徽标 -->
-        <view class="hero-warning-row" wx:if="{{warning}}">
+        <view class="hero-warning-row" wx:if="{{warning}}" bindtap="showWarningDetail">
           <view class="hero-warning" style="background:{{warning.color}};">
             <text class="hero-warning-icon">⚠</text>
             <text>{{warning.title}}</text>
+            <text class="hero-warning-arrow">›</text>
           </view>
         </view>
 
@@ -248,7 +249,7 @@
         <text class="title-sub text-muted">今日出行参考</text>
       </view>
       <view class="indices-grid">
-        <view class="index-tile" wx:for="{{indices}}" wx:key="type">
+        <view class="index-tile" wx:for="{{indices}}" wx:key="type" bindtap="showIndexDetail" data-index="{{index}}">
           <view class="index-tile-header">
             <text class="index-tile-icon">{{item.icon}}</text>
             <text class="index-tile-name">{{item.name}}</text>
@@ -459,6 +460,53 @@
     <!-- 更新信息 -->
     <view class="update-info text-center text-sm text-muted" wx:if="{{updateTime}}">
       <text>数据更新时间: {{updateTime}}</text>
+    </view>
+  </view>
+
+  <!-- ===== 预警详情弹窗 ===== -->
+  <view class="modal-mask" wx:if="{{showWarningModal}}" bindtap="closeWarningDetail" catchtouchmove="true">
+    <view class="modal-card" catchtap="true">
+      <view class="modal-header">
+        <view class="modal-title-wrap">
+          <text class="modal-icon">⚠️</text>
+          <text class="modal-title">{{warning.typeName || '气象'}} {{warning.level}}预警</text>
+        </view>
+        <view class="modal-close" bindtap="closeWarningDetail">✕</view>
+      </view>
+      <view class="modal-body">
+        <view class="modal-meta-row" wx:if="{{warning.sender || warning.pubTime}}">
+          <text class="modal-meta-sender" wx:if="{{warning.sender}}">{{warning.sender}}</text>
+          <text class="modal-meta-time" wx:if="{{warning.pubTime}}">发布于 {{warning.pubTime}}</text>
+        </view>
+        <scroll-view class="modal-scroll-text" scroll-y>
+          <text class="modal-detail-text">{{warning.text}}</text>
+        </scroll-view>
+      </view>
+      <view class="modal-footer">
+        <button class="modal-btn" bindtap="closeWarningDetail" style="background:{{warning.color}};">我知道了</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- ===== 生活指数建议弹窗 ===== -->
+  <view class="modal-mask" wx:if="{{showIndexModal}}" bindtap="closeIndexDetail" catchtouchmove="true">
+    <view class="modal-card" catchtap="true">
+      <view class="modal-header">
+        <view class="modal-title-wrap">
+          <text class="modal-icon">{{selectedIndex.icon}}</text>
+          <text class="modal-title">{{selectedIndex.fullName || selectedIndex.name}}</text>
+          <text class="modal-badge">{{selectedIndex.category}}</text>
+        </view>
+        <view class="modal-close" bindtap="closeIndexDetail">✕</view>
+      </view>
+      <view class="modal-body">
+        <view class="index-detail-box">
+          <text class="index-detail-text">{{selectedIndex.detailText}}</text>
+        </view>
+      </view>
+      <view class="modal-footer">
+        <button class="modal-btn modal-btn-primary" bindtap="closeIndexDetail">知道了</button>
+      </view>
     </view>
   </view>
 

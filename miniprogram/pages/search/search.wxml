@@ -42,6 +42,33 @@
     </view>
   </view>
 
+  <!-- 历史访问城市 -->
+  <view class="recent-cities" wx:if="{{results.length === 0 && !searching && recentCities.length > 0}}">
+    <view class="section-header flex-between">
+      <view class="card-title">历史访问</view>
+      <view class="clear-recent-btn" bindtap="clearRecentCities">
+        <text class="clear-icon">🗑️</text>
+        <text>清空</text>
+      </view>
+    </view>
+    <view class="city-grid">
+      <view
+        class="city-item"
+        wx:for="{{recentCities}}"
+        wx:key="id"
+        bindtap="selectRecentCity"
+        data-id="{{item.id}}"
+        data-name="{{item.name}}"
+        data-lat="{{item.lat}}"
+        data-lon="{{item.lon}}"
+        data-adm1="{{item.adm1}}"
+        data-adm2="{{item.adm2}}"
+      >
+        {{item.name}}
+      </view>
+    </view>
+  </view>
+
   <!-- 热门城市 -->
   <view class="hot-cities" wx:if="{{results.length === 0 && !searching}}">
     <view class="card-title">热门城市</view>

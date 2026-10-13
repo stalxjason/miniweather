@@ -22,6 +22,7 @@ Page({
     keyword: '',
     results: [],
     hotCities: HOT_CITIES,
+    recentCities: [],
     searching: false,
     statusBarHeight: 0,
     navBarHeight: 44,
@@ -47,7 +48,8 @@ Page({
       // getMenuButtonBoundingClientRect 不兼容时退回默认
     }
 
-    this.setData({ statusBarHeight, navBarHeight, navRight });
+    const recentCities = wx.getStorageSync('recentCities') || [];
+    this.setData({ statusBarHeight, navBarHeight, navRight, recentCities });
   },
 
   onInput(e) {
@@ -102,6 +104,30 @@ Page({
     const lat = Number(e.currentTarget.dataset.lat);
     const lon = Number(e.currentTarget.dataset.lon);
     this.saveAndGoBack({ id, name, lat, lon });
+  },
+
+  selectRecentCity(e) {
+    getApp().globalData.currentLocation = null;
+    const { id, name, adm1, adm2 } = e.currentTarget.dataset;
+    const lat = Number(e.currentTarget.dataset.lat);
+    const lon = Number(e.currentTarget.dataset.lon);
+    this.saveAndGoBack({ id, name, lat, lon, adm1, adm2 });
+  },
+
+  clearRecentCities() {
+    wx.showModal({
+      title: '清空确认',
+      content: '确定要清空历史访问城市吗？',
+      confirmColor: '#1677FF',
+      success: (res) => {
+        if (res.confirm) {
+          try {
+            wx.removeStorageSync('recentCities');
+            this.setData({ recentCities: [] });
+          } catch (e) { /* ignore */ }
+        }
+      }
+    });
   },
 
   async locateCity() {
@@ -161,7 +187,7 @@ Page({
 
   saveAndGoBack(city) {
     const app = getApp();
-    app.globalData.currentCity = {
+    const cityData = {
       id: city.id,
       name: city.name,
       adm1: city.adm1 || '',
@@ -169,7 +195,20 @@ Page({
       lat: Number(city.lat),
       lon: Number(city.lon)
     };
-    wx.setStorageSync('currentCity', app.globalData.currentCity);
+    app.globalData.currentCity = cityData;
+    wx.setStorageSync('currentCity', cityData);
+
+    // 记录到最近访问城市列表（排除“当前位置”）
+    if (city.name && city.name !== '当前位置') {
+      try {
+        let recents = wx.getStorageSync('recentCities') || [];
+        recents = recents.filter(c => c.id !== cityData.id && c.name !== cityData.name);
+        recents.unshift(cityData);
+        recents = recents.slice(0, 8);
+        wx.setStorageSync('recentCities', recents);
+      } catch (e) { /* ignore */ }
+    }
+
     wx.navigateBack();
   },
 
