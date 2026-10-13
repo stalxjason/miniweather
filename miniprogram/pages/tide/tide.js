@@ -155,8 +155,6 @@ Page({
     chartScrollLeft: 0,
     isNowDay: false,
     activeTipTab: 'ganhai',   // Tips 当前激活的选项卡: 'ganhai' | 'chaoxi' | 'haidiao'
-    chartMaxHeight: 300,
-    nowScrollId: '',
     loading: true,
     error: false,
     errorMsg: '',
@@ -194,6 +192,7 @@ Page({
     }
     this.setData({ location, locationFromWeather: fromWeather });
     this.generateDates();
+    this.fetchTideData();
   },
 
   onShow() {
@@ -213,13 +212,22 @@ Page({
     }
     if (!target) return;
 
-    // 仅在地点（或“来源”从显式切换为跟随天气）发生变化时才重新拉取，避免无谓刷新
-    if (target.lat !== this.data.location.lat ||
-        target.lon !== this.data.location.lon ||
-        fromWeather !== this.data.locationFromWeather) {
+    // 无数据或地点发生变化时拉取
+    const needFetch = (!this.data.tideHourly || this.data.tideHourly.length === 0) ||
+      target.lat !== this.data.location.lat ||
+      target.lon !== this.data.location.lon ||
+      fromWeather !== this.data.locationFromWeather;
+
+    if (needFetch) {
       this.setData({ location: target, locationFromWeather: fromWeather });
       this.fetchTideData();
     }
+  },
+
+  onPullDownRefresh() {
+    this.fetchTideData().finally(() => {
+      wx.stopPullDownRefresh();
+    });
   },
 
   onHide() {
@@ -353,24 +361,26 @@ Page({
         };
       });
 
-      // 若发生海岸吸附，反查吸附点地名用于展示（失败则用坐标兜底，不阻塞主流程）
-      let tideSnapName = '';
-      let tideSnapDist = '';
+      // 若发生海岸吸附，优先使用返回的站点名与距离（避免多余的网络反查）
+      let tideSnapName = res.snapStationName || '';
+      let tideSnapDist = (typeof res.snapDistanceKm === 'number') ? `约 ${fmtDist(res.snapDistanceKm)}` : '';
       if (res.snapped && typeof res.usedLat === 'number' && typeof res.usedLon === 'number') {
-        try {
-          const geo = await api.searchCityByLocation(res.usedLat, res.usedLon);
-          if (geo && geo.location && geo.location.length > 0) {
-            tideSnapName = util.cityDisplayName(geo.location[0]) || '';
+        if (!tideSnapName) {
+          try {
+            const geo = await api.searchCityByLocation(res.usedLat, res.usedLon);
+            if (geo && geo.location && geo.location.length > 0) {
+              tideSnapName = util.cityDisplayName(geo.location[0]) || '';
+            }
+          } catch (e) {
+            // 反查失败不影响主数据展示，下方用坐标兜底
           }
-        } catch (e) {
-          // 反查失败不影响主数据展示，下方用坐标兜底
         }
         if (!tideSnapName) {
           tideSnapName = `${res.usedLat.toFixed(2)}°N, ${res.usedLon.toFixed(2)}°E`;
         }
 
-        // 计算原定位点 → 吸附点的直线距离，拼到提示文案
-        if (tideSnapName) {
+        // 计算原定位点 → 吸附点的直线距离（若前面未带回）
+        if (!tideSnapDist && tideSnapName) {
           const app = getApp();
           const base = app.globalData.currentLocation || this.data.location;
           const dKm = haversine(Number(base.lat), Number(base.lon), res.usedLat, res.usedLon);
@@ -384,7 +394,6 @@ Page({
         tideHourly: processedHourly,
         yAxisLabels: yLabels,
         isNowDay,
-        nowScrollId: isNowDay ? 'bar-' + nowHour : '',
         error: false,
         loading: false,
         tideSnapped: !!res.snapped,
@@ -698,13 +707,20 @@ Page({
         nowHourStr = String(curH).padStart(2, '0');
 
         const fracH = curH + curM / 60;
-        if (fracH >= 0 && fracH <= 23) {
-          nowX = padL + fracH * colW;
+        if (fracH >= 0 && fracH < 24) {
           const idx = Math.floor(fracH);
-          const ratio = fracH - idx;
-          const nextIdx = Math.min(idx + 1, 23);
-          const nowY = pts[idx].y + (pts[nextIdx].y - pts[idx].y) * ratio;
-          const curHeightVal = pts[idx].height + (pts[nextIdx].height - pts[idx].height) * ratio;
+          let nowY, curHeightVal;
+          if (idx >= 23) {
+            nowX = padL + 23 * colW;
+            nowY = pts[23].y;
+            curHeightVal = pts[23].height;
+          } else {
+            nowX = padL + fracH * colW;
+            const ratio = fracH - idx;
+            const nextIdx = idx + 1;
+            nowY = pts[idx].y + (pts[nextIdx].y - pts[idx].y) * ratio;
+            curHeightVal = pts[idx].height + (pts[nextIdx].height - pts[idx].height) * ratio;
+          }
 
           // 绘制垂直指示虚线
           ctx.beginPath();

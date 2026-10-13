@@ -1,15 +1,14 @@
 // app.js
+const config = require('./config');
+
 App({
   globalData: {
     // 和风天气通过微信云开发云函数（qweather）代理转发，KEY 只存云端环境变量，客户端零密钥。
     // 调用走 wx.cloud.callFunction 微信内网通道，无需 request 合法域名、无需域名备案。
 
-    // 当前选中城市
+    // 当前选中城市（初始使用全局配置文件 config.js 中的 defaultCity）
     currentCity: {
-      id: '101010100',     // 默认北京
-      name: '北京',
-      lat: 39.90499,       // 统一为 number（约定：lat/lon 一律 number，避免与定位结果字符串混杂）
-      lon: 116.40529
+      ...config.defaultCity
     },
 
     // 定位得到的精确设备坐标（街道级），供潮汐按“距离定位最近的点”取数
@@ -26,12 +25,13 @@ App({
   },
 
   onLaunch() {
-    // 初始化微信云开发（KEY 安全性由云函数保障）
+    // 初始化微信云开发（KEY 安全性由云函数保障；环境 ID 从 config.js 读取，支持自适应当前环境）
     if (!wx.cloud) {
       console.error('当前基础库不支持云开发，请升级微信开发者工具基础库到 2.2.3 以上');
     } else {
+      const env = config.cloudEnv || (wx.cloud.DYNAMIC_CURRENT_ENV || '');
       wx.cloud.init({
-        env: 'cloud1-d3gvlu91fc41b9439',
+        env,
         traceUser: true
       });
     }
@@ -42,6 +42,9 @@ App({
     // 从本地存储恢复城市设置
     const city = wx.getStorageSync('currentCity');
     if (city) {
+      // 防御校验：保证从 storage 恢复的 lat/lon 必定为 number 类型
+      if (city.lat != null) city.lat = Number(city.lat);
+      if (city.lon != null) city.lon = Number(city.lon);
       this.globalData.currentCity = city;
     }
     // 恢复潮汐地点（用户在潮汐页显式选过的站点，重启后保留）

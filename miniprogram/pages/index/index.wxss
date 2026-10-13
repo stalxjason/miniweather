@@ -1,6 +1,29 @@
-/* pages/index/index.wxss - 全屏动态天气 */
+/* pages/index/index.wxss - 清爽晴朗天空蓝体系 */
 
-/* ===== 内容层：位于固定动效之上 ===== */
+/* ===== 页面容器与清爽天空蓝背景 ===== */
+.container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #257CEE 0%, #4693F7 22%, #7BB0F8 42%, #C4DCFA 64%, #EEF4FC 84%, #F4F7FC 100%);
+  background-attachment: fixed;
+  position: relative;
+  overflow-x: hidden;
+  padding-bottom: calc(30rpx + env(safe-area-inset-bottom));
+}
+
+/* 顶部轻柔高光天幕微润光晕 */
+.container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 520rpx;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0) 75%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ===== 内容层 ===== */
 .content-layer {
   position: relative;
   z-index: 1;
@@ -9,70 +32,12 @@
   -webkit-font-smoothing: antialiased;
 }
 
-/* ===== 全屏自然天气天空氛围层（固定背景） ===== */
-.weather-effect {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-  transition: background 0.8s ease-in-out;
-}
-
-/* 顶部微弱自然大气天光反射 */
-.weather-effect::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 480rpx;
-  background: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 75%);
-  pointer-events: none;
-}
-
-/* 优雅通透的各天气天空微渐变（晴/云/雨/雷/雪/雾） */
-.effect-sun {
-  background: linear-gradient(180deg, #3A8AE8 0%, #68A7F4 32%, #C4DDFA 65%, #F0F4FA 100%);
-}
-
-.effect-cloud {
-  background: linear-gradient(180deg, #58718E 0%, #7E97B2 32%, #C9D8E6 65%, #F2F5F8 100%);
-}
-
-.effect-rain {
-  background: linear-gradient(180deg, #475F78 0%, #69839C 32%, #BCCCDA 65%, #EFF3F6 100%);
-}
-
-.effect-thunder {
-  background: linear-gradient(180deg, #304052 0%, #4D6277 32%, #A8B8C8 65%, #ECEFF4 100%);
-}
-
-.effect-snow {
-  background: linear-gradient(180deg, #6C8198 0%, #96A8BB 32%, #DCE5EE 65%, #F5F7FA 100%);
-}
-
-.effect-fog {
-  background: linear-gradient(180deg, #7C8690 0%, #9EA7B0 32%, #D9DFE4 65%, #F4F6F8 100%);
-}
-
-/* ===== Hero：大字温度版式（参考墨迹风格） ===== */
+/* ===== Hero：大字温度与今日气象实况 ===== */
 .hero-section {
   padding: 30rpx 40rpx 36rpx;
   color: #FFFFFF;
   position: relative;
   z-index: 1;
-  text-shadow: 0 2rpx 14rpx rgba(0, 0, 0, 0.28);
-}
-.hero-dark {
-  color: #1A1A1A;
-  text-shadow: none;
-}
-.hero-dark .city-arrow {
-  border-top-color: rgba(0, 0, 0, 0.45);
 }
 
 .city-selector {
@@ -91,13 +56,14 @@
   font-size: 36rpx;
   font-weight: 700;
   margin-right: 8rpx;
+  letter-spacing: 0.5rpx;
 }
 .city-arrow {
   width: 0;
   height: 0;
   border-left: 10rpx solid transparent;
   border-right: 10rpx solid transparent;
-  border-top: 12rpx solid rgba(255, 255, 255, 0.7);
+  border-top: 12rpx solid rgba(255, 255, 255, 0.85);
 }
 
 /* 预警徽标（左上，橙/黄/红底白字） */
@@ -116,28 +82,29 @@
   font-weight: 600;
   color: #FFFFFF;
   text-shadow: none;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.12);
 }
 .hero-warning-icon {
   margin-right: 8rpx;
   font-size: 24rpx;
 }
 
-/* 大字温度（细体，居中） */
+/* 大字温度（细体通透，居中） */
 .hero-temp-row {
   text-align: center;
   position: relative;
   z-index: 1;
-  margin: -20rpx 0 0;
+  margin: -16rpx 0 0;
 }
 .hero-temp {
   font-size: 190rpx;
-  font-weight: 100;
+  font-weight: 200;
   line-height: 1.15;
   letter-spacing: -4rpx;
+  text-shadow: 0 4rpx 20rpx rgba(18, 64, 136, 0.15);
 }
 .hero-temp-unit {
-  font-size: 90rpx;
+  font-size: 88rpx;
   font-weight: 200;
   vertical-align: 60rpx;
   letter-spacing: 0;
@@ -150,15 +117,16 @@
   justify-content: center;
   position: relative;
   z-index: 1;
-  margin-top: 6rpx;
+  margin-top: 4rpx;
 }
 .hero-cond-text {
-  font-size: 32rpx;
-  font-weight: 500;
+  font-size: 34rpx;
+  font-weight: 600;
+  letter-spacing: 1rpx;
 }
 .hero-cond-sep {
   margin: 0 18rpx;
-  opacity: 0.6;
+  opacity: 0.65;
   font-size: 28rpx;
 }
 .hero-aqi {
@@ -169,7 +137,7 @@
   font-size: 24rpx;
   font-weight: 600;
   text-shadow: none;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.10);
 }
 
 /* 关键指标行 */
@@ -178,7 +146,7 @@
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  margin-top: 22rpx;
+  margin-top: 20rpx;
   font-size: 26rpx;
   opacity: 0.95;
   position: relative;
@@ -186,14 +154,14 @@
 }
 .hero-metric-sep {
   margin: 0 16rpx;
-  opacity: 0.55;
+  opacity: 0.60;
 }
 
 /* 快讯卡：降水 / 台风 */
 .notice-row {
   display: flex;
   gap: 20rpx;
-  margin-top: 30rpx;
+  margin-top: 28rpx;
   position: relative;
   z-index: 1;
 }
@@ -203,16 +171,17 @@
   display: flex;
   align-items: center;
   background: rgba(255, 255, 255, 0.22);
+  border: 1rpx solid rgba(255, 255, 255, 0.38);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
   border-radius: 18rpx;
   padding: 20rpx 22rpx;
-  text-shadow: none;
-  transition: background 0.15s;
+  color: #FFFFFF;
+  box-shadow: 0 4rpx 16rpx rgba(16, 60, 130, 0.08);
+  transition: all 0.15s;
 }
 .notice-card:active {
-  background: rgba(255, 255, 255, 0.35);
-}
-.hero-dark .notice-card {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.32);
 }
 .notice-text {
   flex: 1;
@@ -228,7 +197,7 @@
 .notice-arrow {
   margin-left: 12rpx;
   font-size: 30rpx;
-  opacity: 0.6;
+  opacity: 0.8;
   flex-shrink: 0;
 }
 
@@ -237,18 +206,15 @@
   display: flex;
   align-items: stretch;
   margin-top: 24rpx;
-  background: rgba(255, 255, 255, 0.20);
-  border: 1rpx solid rgba(255, 255, 255, 0.32);
-  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.22);
+  border: 1rpx solid rgba(255, 255, 255, 0.40);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
   border-radius: 20rpx;
-  padding: 16rpx 24rpx;
+  padding: 18rpx 24rpx;
   position: relative;
   z-index: 1;
-  text-shadow: none;
-}
-.hero-dark .today-strip {
-  background: rgba(0, 0, 0, 0.05);
-  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4rpx 18rpx rgba(16, 60, 130, 0.08);
 }
 .today-cell {
   flex: 1;
@@ -262,12 +228,12 @@
 .today-label {
   font-size: 26rpx;
   font-weight: 700;
-  color: inherit;
+  color: #FFFFFF;
 }
 .today-temp {
   font-size: 26rpx;
   font-weight: 600;
-  color: inherit;
+  color: #FFFFFF;
 }
 .today-sub {
   display: flex;
@@ -276,37 +242,34 @@
   margin-top: 6rpx;
 }
 .today-text {
-  font-size: 22rpx;
-  opacity: 0.90;
+  font-size: 23rpx;
+  color: rgba(255, 255, 255, 0.92);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .today-icon {
-  width: 40rpx;
-  height: 40rpx;
+  width: 42rpx;
+  height: 42rpx;
   flex-shrink: 0;
   margin-left: 10rpx;
 }
 .today-divider {
   width: 1rpx;
-  background: rgba(255, 255, 255, 0.32);
-  margin: 4rpx 22rpx;
-}
-.hero-dark .today-divider {
-  background: rgba(0, 0, 0, 0.10);
+  background: rgba(255, 255, 255, 0.35);
+  margin: 4rpx 24rpx;
 }
 
-/* ===== 统一玻璃卡片规范 ===== */
+/* ===== 纯白高质感微光卡片规范 ===== */
 .card {
-  background: rgba(255, 255, 255, 0.90);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  border-radius: 22rpx;
-  padding: 24rpx 26rpx;
-  margin: 16rpx 20rpx;
-  border: 1rpx solid rgba(255, 255, 255, 0.80);
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  padding: 26rpx 28rpx;
+  margin: 18rpx 24rpx;
+  border: 1rpx solid rgba(220, 234, 250, 0.7);
+  box-shadow: 0 6rpx 24rpx rgba(25, 68, 130, 0.05);
+  position: relative;
+  z-index: 1;
 }
 
 .card .card-title::before {
@@ -316,7 +279,7 @@
 .card-title {
   font-size: 28rpx;
   font-weight: 700;
-  color: #1F1F1F;
+  color: #1A283B;
   margin-bottom: 20rpx;
   display: flex;
   align-items: center;
@@ -336,7 +299,7 @@
 
 .title-sub {
   font-size: 22rpx;
-  color: #8C8C8C;
+  color: #8C99A8;
   font-weight: 400;
   letter-spacing: 0;
 }
@@ -1284,12 +1247,12 @@
   border-radius: 6rpx;
   background: rgba(255, 255, 255, 0.5);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 .astro-bar-fill-sun {
   position: absolute;
   left: 0; top: 0; bottom: 0;
-  width: 50%;
+  max-width: 100%;
   background: linear-gradient(90deg, #FFB347 0%, #FF8C42 100%);
   border-radius: 6rpx;
 }

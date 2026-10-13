@@ -10,9 +10,6 @@ const app = getApp();
 // —— 请求缓存：减少免费版每日配额消耗（默认 10 分钟 TTL）——
 const CACHE_TTL = 10 * 60 * 1000;
 const _requestCache = new Map();
-function _cacheKey(host, path, params) {
-  return `${host}${path}|${JSON.stringify(params)}`;
-}
 function _getCache(key, ttl) {
   const hit = _requestCache.get(key);
   // 优先用传入 ttl；否则用写入缓存时携带的 ttl；再否则默认 CACHE_TTL
@@ -22,6 +19,7 @@ function _getCache(key, ttl) {
   return null;
 }
 function _setCache(key, data, ttl = CACHE_TTL) {
+  if (_requestCache.size > 100) _requestCache.clear();
   _requestCache.set(key, { time: Date.now(), data, ttl });
 }
 
@@ -207,14 +205,80 @@ const getWarningNow = (locationId) => {
  */
 const MARINE_HOST = 'https://marine-api.open-meteo.com';
 
-// 单次 Open-Meteo 海洋请求（返回 {times, heights, utcOffsetSeconds}），失败 reject
-// utcOffsetSeconds：站点时区相对 UTC 的偏移（Open-Meteo timezone=auto 返回），供前端换算“当地当前小时”
-function requestMarine(lat, lon, start, end) {
+let tideStations = [];
+try {
+  tideStations = require('../data/tideStations');
+} catch (e) {
+  console.warn('[tide] 未能加载 tideStations 观测站清单:', e);
+}
+
+// 站点间球面直线距离（Haversine 公式，单位 km）
+function _haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// 快速匹配距离指定经纬度最近的沿海潮汐观测站（0ms 本地计算）
+function _findNearestStation(lat, lon) {
+  if (!Array.isArray(tideStations) || !tideStations.length) return null;
+  let minD = Infinity;
+  let best = null;
+  for (const s of tideStations) {
+    const d = _haversineKm(lat, lon, s.lat, s.lon);
+    if (d < minD) {
+      minD = d;
+      best = s;
+    }
+  }
+  return best ? { ...best, distanceKm: minD } : null;
+}
+
+// 通道1：微信云函数代理请求（免开微信公众平台合法域名、走腾讯云专线直连海外、免受开发工具本地代理 TLS 握手冲突影响）
+function requestMarineViaCloud(lat, lon, start, end) {
+  return new Promise((resolve, reject) => {
+    if (typeof wx === 'undefined' || !wx.cloud || typeof wx.cloud.callFunction !== 'function') {
+      return reject(new Error('wx.cloud 不可用'));
+    }
+    wx.cloud.callFunction({
+      name: 'qweather',
+      data: { action: 'marine', lat, lon, start, end },
+      success: (res) => {
+        const data = res.result;
+        if (data && data.code === '200' && data.times && data.heights) {
+          resolve({
+            times: data.times || [],
+            heights: data.heights || [],
+            utcOffsetSeconds: data.utcOffsetSeconds
+          });
+        } else if (data && data.error) {
+          const msg = (data.error.errorMessage || JSON.stringify(data.error) || '云函数运行异常').slice(0, 200);
+          reject(new Error(`云端潮汐代理错误: ${msg}`));
+        } else {
+          reject(new Error((data && data.message) || '云端潮汐代理未返回有效数据'));
+        }
+      },
+      fail: (err) => {
+        reject(err);
+      }
+    });
+  });
+}
+
+// 通道2：客户端直连 Open-Meteo 兜底（云函数尚未部署或临时异常时自动降级直连）
+function requestMarineDirect(lat, lon, start, end) {
   const url = `${MARINE_HOST}/v1/marine?latitude=${lat}&longitude=${lon}` +
     `&hourly=sea_level_height_msl&timezone=auto&start_date=${start}&end_date=${end}`;
   return new Promise((resolve, reject) => {
     wx.request({
       url,
+      method: 'GET',
+      timeout: 8000,
       success: (res) => {
         if (res.statusCode === 200 && res.data && res.data.hourly) {
           resolve({
@@ -230,12 +294,29 @@ function requestMarine(lat, lon, start, end) {
       },
       fail: (err) => {
         console.error('Open-Meteo 网络请求失败:', err);
-        // 微信小程序在域名未加入 request 合法域名白名单时，会直接 fail（请求根本不发往服务器）。
-        // 明确提示域名配置，避免误以为是本地网络问题。
-        reject(new Error('潮汐数据源(marine-api.open-meteo.com)请求被拒：请确认已配置该域名，或开发者工具已勾选"不校验合法域名"'));
+        const errMsg = (err && (err.errMsg || err.message)) || '';
+        let hint = '潮汐数据源请求失败';
+        if (errMsg.includes('ERR_CONNECTION_CLOSED') || errMsg.includes('CONNECTION_RESET')) {
+          hint = '开发者工具网络代理冲突导致断开(ERR_CONNECTION_CLOSED)：建议在开发者工具“设置 -> 代理设置”中勾选“不使用任何代理”，或上传部署 qweather 云函数';
+        } else if (errMsg.includes('url not in domain list') || errMsg.includes('合法域名')) {
+          hint = '潮汐域名未在白名单：请在开发者工具“详情 -> 本地设置”勾选“不校验合法域名”，或上传部署 qweather 云函数';
+        } else {
+          hint = `潮汐网络连接异常: ${errMsg || '未知错误'}`;
+        }
+        reject(new Error(hint));
       }
     });
   });
+}
+
+// 综合拉取：双通道保障，云函数优先，客户端直连兜底
+async function requestMarine(lat, lon, start, end) {
+  try {
+    return await requestMarineViaCloud(lat, lon, start, end);
+  } catch (cloudErr) {
+    console.warn('[tide] 云端代理拉取潮汐失败，回退客户端直接请求:', (cloudErr && cloudErr.message) || cloudErr);
+    return await requestMarineDirect(lat, lon, start, end);
+  }
 }
 
 // 有效潮高点判定：Open-Meteo 在陆地网格点返回全 null，只有海洋网格点才有数值
@@ -245,13 +326,15 @@ function _hasTide(r) {
 
 /**
  * 按坐标拉取潮汐（海平面高度）。
- * 关键容错：给定坐标若在陆地网格上无数据（内陆/定位失败 fallback 到内陆城市等），
- * 自动螺旋搜索最近的有数据海岸点（snap），使潮汐始终能显示“距离定位最近的监测点”，
- * 而非直接报错“无潮汐数据”。吸附成功后回传 { snapped:true, usedLat, usedLon }。
+ * 容错设计：
+ * 1. 若当前坐标处于海岸有潮汐数据，直接使用；
+ * 2. 若当前坐标处于内陆山区无海洋网格数据（Open-Meteo 返回全 null），
+ *    立即通过内置 99 个沿海核心监测点清单进行球面最短距离匹配（0ms 本地计算，仅发 1 次请求）
+ *    彻底废除以往 32 次盲目并发螺旋探测机制，从根源消除网络风暴与 ERR_CONNECTION_CLOSED。
  * @param {number|string} lat
  * @param {number|string} lon
  * @param {string} date 本周一 anchor（yyyyMMdd），一次拉整周 ±1 天窗口
- * @returns {Promise<{times:string[], heights:(number|null)[], snapped?:boolean, usedLat?:number, usedLon?:number}>}
+ * @returns {Promise<{times:string[], heights:(number|null)[], snapped?:boolean, usedLat?:number, usedLon?:number, snapStationName?:string, snapDistanceKm?:number}>}
  */
 const getTideByCoord = async (lat, lon, date) => {
   // 数值范围校验：防异常/越界坐标直传第三方；合法纬度[-90,90]、经度[-180,180]
@@ -277,36 +360,45 @@ const getTideByCoord = async (lat, lon, date) => {
   if (tideCached) return tideCached;
 
   // 1) 主坐标请求
-  const main = await requestMarine(la, lo, start, end).catch(() => null);
+  let mainErr = null;
+  const main = await requestMarine(la, lo, start, end).catch((e) => {
+    mainErr = e;
+    return null;
+  });
   if (main && _hasTide(main)) {
     const ok = { ...main, usedLat: la, usedLon: lo };
     _setCache(tideKey, ok);
     return ok;
   }
 
-  // 2) 海岸吸附：螺旋搜索最近的有数据海岸点（内陆坐标自动吸附到最近海岸）
-  //    步长由小到大、8 方向同层并行请求（串行最坏 32 次会等太久）；命中即返回。
-  //    沿海/近内陆用户通常 1~2 层内命中。
-  const steps = [0.5, 1.0, 2.0, 3.0];
-  const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]];
-  for (const step of steps) {
-    const candidates = dirs
-      .map(([dx, dy]) => ({
-        la: +(la + dy * step).toFixed(3),
-        lo: +(lo + dx * step).toFixed(3)
-      }))
-      .filter(c => c.la >= -90 && c.la <= 90 && c.lo >= -180 && c.lo <= 180);
-    const results = await Promise.all(
-      candidates.map(c => requestMarine(c.la, c.lo, start, end).then(r => (r && _hasTide(r)) ? { ...r, usedLat: c.la, usedLon: c.lo, snapped: true } : null).catch(() => null))
-    );
-    const hit = results.find(Boolean);
-    if (hit) {
+  // 2) 海岸吸附：若主坐标处于内陆无潮汐数据，智能匹配最近沿海观测站
+  const nearest = _findNearestStation(la, lo);
+  if (nearest) {
+    console.log(`[tide] 内陆坐标(${la}, ${lo})自动吸附到最近海岸观测站: ${nearest.name}(${nearest.lat}, ${nearest.lon})，直线距离约 ${nearest.distanceKm.toFixed(1)}km`);
+    const coastal = await requestMarine(nearest.lat, nearest.lon, start, end).catch((e) => {
+      console.warn('[tide] 吸附海岸站请求失败:', e);
+      return null;
+    });
+    if (coastal && _hasTide(coastal)) {
+      const hit = {
+        ...coastal,
+        usedLat: nearest.lat,
+        usedLon: nearest.lon,
+        snapped: true,
+        snapStationName: nearest.name,
+        snapDistanceKm: nearest.distanceKm
+      };
       _setCache(tideKey, hit);
       return hit;
     }
   }
 
-  // 3) 极深内陆实在找不到海岸点：返回主结果（可能无数据），由调用方提示“无潮汐数据”
+  // 3) 若网络中断等原因导致全部失败，且有明确异常信息，抛出给前端展示友好提示
+  if (!main && mainErr) {
+    throw mainErr;
+  }
+
+  // 4) 极端兜底（返回可能无数据的结构，前端进入无数据/重试态）
   return { ...(main || { times: [], heights: [] }), usedLat: la, usedLon: lo };
 };
 

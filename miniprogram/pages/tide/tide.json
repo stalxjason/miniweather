@@ -1,3 +1,9 @@
 {
-  "navigationBarTitleText": "潮汐表"
+  "navigationBarTitleText": "潮汐表",
+  "navigationBarBackgroundColor": "#0A3A6B",
+  "navigationBarTextStyle": "white",
+  "enablePullDownRefresh": true,
+  "backgroundColor": "#0A3A6B",
+  "backgroundColorTop": "#0A3A6B",
+  "backgroundColorBottom": "#F5F7FA"
 }

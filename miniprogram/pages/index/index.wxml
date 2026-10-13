@@ -1,12 +1,9 @@
-<!-- pages/index/index.wxml - 天气首页（全屏动态天空） -->
+<!-- pages/index/index.wxml - 天气首页（清爽晴空） -->
 <view class="container">
-  <!-- 全屏自然天气天空氛围层（固定背景） -->
-  <view class="weather-effect effect-{{now.effectType || 'sun'}}"></view>
-
-  <!-- 内容层（在动效之上滚动） -->
+  <!-- 内容层 -->
   <view class="content-layer">
     <!-- ===== Hero：城市 / 大字温度 / 天气+AQI / 指标 / 快讯卡 / 今明条 ===== -->
-    <view class="hero-section {{heroTextClass}}">
+    <view class="hero-section">
       <view class="city-selector" bindtap="goToSearch">
         <text class="city-pin">📍</text>
         <text class="city-name">{{city.name}}</text>
@@ -109,7 +106,7 @@
         </view>
         <text class="title-sub text-muted" wx:if="{{minutely.summary}}">{{minutely.summary}}</text>
       </view>
-      <view class="rain-bars-wrap" wx:if="{{minutely.bars.length > 0}}">
+      <view class="rain-bars-wrap" wx:if="{{minutely.hasRain}}">
         <view class="rain-bars">
           <view class="rain-bar {{item.type === 'snow' ? 'rain-bar-snow' : ''}}" wx:for="{{minutely.bars}}" wx:key="idx" style="height: {{item.pct}}rpx;"></view>
         </view>
@@ -119,8 +116,8 @@
           <text>2小时后</text>
         </view>
       </view>
-      <view class="rain-empty text-muted" wx:if="{{minutely.bars.length === 0}}">
-        <text>未来2小时无降水，安心出行</text>
+      <view class="rain-empty text-muted" wx:else>
+        <text>{{minutely.summary || '未来2小时无降水，安心出行'}}</text>
       </view>
     </view>
 
@@ -295,7 +292,7 @@
             </view>
           </view>
           <view class="astro-bar">
-            <view class="astro-bar-fill astro-bar-fill-sun"></view>
+            <view class="astro-bar-fill astro-bar-fill-sun" style="width: {{astro.daylightPercent}}%;"></view>
             <view class="astro-bar-cap" style="left: {{astro.daylightPercent}}%;"></view>
           </view>
         </view>

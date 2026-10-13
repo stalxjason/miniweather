@@ -1,6 +1,10 @@
 {
   "navigationBarTitleText": "天气预报",
+  "navigationBarBackgroundColor": "#257CEE",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#257CEE",
+  "backgroundColorTop": "#257CEE",
+  "backgroundColorBottom": "#F4F7FC",
   "enablePullDownRefresh": true,
-  "backgroundColor": "#F0F4FF",
   "usingComponents": {}
 }

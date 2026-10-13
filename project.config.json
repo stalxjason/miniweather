@@ -47,7 +47,7 @@
     "disableSWC": true
   },
   "compileType": "miniprogram",
-  "libVersion": "3.3.4",
+  "libVersion": "3.17.2",
   "appid": "wx8754461a55a1cf42",
   "projectname": "miniweather",
   "miniprogramRoot": "miniprogram/",

@@ -61,7 +61,7 @@ const ALLOWED_PATHS = [
   /^geo\/v2\/city\/lookup$/
 ];
 
-const TIMEOUT = 5000; // 内部超时（小于云函数超时，确保拿到可读错误）
+const TIMEOUT = 8000; // 内部超时（兼容跨国海洋 API 响应，确保拿到可读错误）
 
 // 模块级内存缓存（云函数实例可能复用，省额度）
 const cache = new Map();
@@ -74,9 +74,9 @@ function isInvalidHost(data) {
   return /invalid host|unauthorized api host/.test(s);
 }
 
-// 重定向白名单：仅允许跳转到和风天气/Geo 域名，杜绝 SSRF（跳内网/元数据 169.254.169.254 等）
+// 重定向白名单：仅允许跳转到和风天气/Geo 域名及 Open-Meteo 海洋域名，杜绝 SSRF（跳内网/元数据 169.254.169.254 等）
 const ALLOWED_REDIRECT_HOSTS = new Set(
-  [...WEATHER_HOSTS, ...GEO_HOSTS]
+  [...WEATHER_HOSTS, ...GEO_HOSTS, 'https://marine-api.open-meteo.com']
     .map((h) => { try { return new URL(h).hostname; } catch (e) { return ''; } })
     .filter(Boolean)
 );
@@ -178,7 +178,50 @@ async function tryHostSafe(base, cleanPath, params, key) {
 
 // 真正的业务入口（会被外层 try/catch 包住）
 async function realMain(event) {
-  const { path, params = {} } = event || {};
+  const { path, action, params = {}, lat, lon, start, end } = event || {};
+
+  // 潮汐接口代理（Open-Meteo marine，免 key 转发，走微信云开发出口直通海外，彻底解决小程序客户端直连网络受限与 ERR_CONNECTION_CLOSED）
+  if (action === 'marine' || path === 'marine') {
+    const latitude = Number(lat !== undefined ? lat : (params.lat !== undefined ? params.lat : params.latitude));
+    const longitude = Number(lon !== undefined ? lon : (params.lon !== undefined ? params.lon : params.longitude));
+    const startDate = start || params.start || params.start_date;
+    const endDate = end || params.end || params.end_date;
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return { code: 'ERR', message: 'invalid marine latitude/longitude' };
+    }
+    const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${latitude}&longitude=${longitude}&hourly=sea_level_height_msl&timezone=auto` +
+      (startDate ? `&start_date=${startDate}` : '') +
+      (endDate ? `&end_date=${endDate}` : '');
+
+    const hit = cache.get(marineUrl);
+    if (hit && Date.now() - hit.t < TTL) return hit.data;
+
+    try {
+      const { statusCode, body } = await doRequest(marineUrl);
+      if (statusCode !== 200) {
+        return { code: 'ERR', message: `Open-Meteo marine upstream HTTP ${statusCode}: ${(body || '').slice(0, 100)}` };
+      }
+      let data;
+      try {
+        data = JSON.parse(body);
+      } catch (pe) {
+        return { code: 'ERR', message: `Open-Meteo marine parse error: ${(body || '').slice(0, 100)}` };
+      }
+      const resData = {
+        code: '200',
+        times: (data.hourly && data.hourly.time) || [],
+        heights: (data.hourly && data.hourly.sea_level_height_msl) || [],
+        utcOffsetSeconds: data.utc_offset_seconds
+      };
+      cache.set(marineUrl, { t: Date.now(), data: resData });
+      if (cache.size > 200) cache.clear();
+      return resData;
+    } catch (e) {
+      console.error('[qweather] marine request error:', e);
+      return { code: 'ERR', message: 'marine upstream request failed: ' + (e.message || String(e)) };
+    }
+  }
+
   if (!path) return { code: 'ERR', message: 'missing path' };
   if (!KEYS.length) return { code: 'ERR', message: 'QWEATHER_KEY not set in env' };
 

@@ -37,37 +37,13 @@ const INDEX_ICONS = {
 
 // 平滑曲线：相邻点中点作控制点的三次贝塞尔（天气类温度曲线通用画法）
 function traceSmoothCurve(ctx, pts) {
+  if (!pts || pts.length === 0) return;
   ctx.moveTo(pts[0].x, pts[0].y);
   for (let i = 1; i < pts.length; i++) {
     const p = pts[i - 1], c = pts[i];
     const mx = (p.x + c.x) / 2;
     ctx.bezierCurveTo(mx, p.y, mx, c.y, c.x, c.y);
   }
-}
-
-// 由 fxTime 的时区偏移（如 "2026-09-04T10:00+08:00" 的 +08:00）算出该城市“现在”的当地小时，
-// 用于和 fxTime 中的当地小时比较；解析失败回退设备本地小时（国内场景两者一致）。
-function localHourFromFxTime(fxTime) {
-  const fallback = new Date().getHours();
-  if (!fxTime || typeof fxTime !== 'string') return fallback;
-  const m = fxTime.match(/([+-])(\d{2}):(\d{2})$/);
-  if (!m) return fallback;
-  const offsetMin = (Number(m[2]) * 60 + Number(m[3])) * (m[1] === '-' ? -1 : 1);
-  const now = new Date(); // 设备本地时间 -> UTC -> 城市当地时间
-  const local = new Date(now.getTime() + (now.getTimezoneOffset() + offsetMin) * 60000);
-  return local.getHours();
-}
-
-// 根据天气文字返回对应动效类型
-function getWeatherEffect(text) {
-  if (!text) return '';
-  if (/雷/.test(text)) return 'thunder';
-  if (/雨/.test(text)) return 'rain';
-  if (/雪/.test(text)) return 'snow';
-  if (/雾|霾/.test(text)) return 'fog';
-  if (/云|阴/.test(text)) return 'cloud';
-  if (/晴/.test(text)) return 'sun';
-  return 'cloud';
 }
 
 // AQI 等级 -> 配色（参考国标空气质量分色，且保证文字/底色对比度 ≥ 4.5:1）
@@ -82,43 +58,6 @@ function aqiColor(level) {
     case 6: return { bg: '#7E0023', fg: '#FFFFFF' }; // 严重污染：褐红底白字
     default: return { bg: '#595959', fg: '#FFFFFF' }; // 未知：深灰底白字
   }
-}
-
-// 生成雨/雪粒子（全屏随机分布，避免大量 nth-child 规则）
-function buildParticles(type) {
-  const isSnow = type === 'snow';
-  const n = isSnow ? 46 : 52;
-  const arr = [];
-  for (let i = 0; i < n; i++) {
-    const left = (Math.random() * 100).toFixed(2);
-    const dur = isSnow
-      ? (3 + Math.random() * 3).toFixed(2)
-      : (0.45 + Math.random() * 0.5).toFixed(2);
-    const delay = (Math.random() * (isSnow ? 4 : 1.2)).toFixed(2);
-    if (isSnow) {
-      const size = (6 + Math.random() * 9).toFixed(0); // 6~15rpx
-      arr.push({ id: i, style: `left:${left}%; width:${size}rpx; height:${size}rpx; animation-duration:${dur}s; animation-delay:-${delay}s;` });
-    } else {
-      const size = (16 + Math.random() * 22).toFixed(0); // 16~38rpx 高度
-      arr.push({ style: `left:${left}%; height:${size}rpx; animation-duration:${dur}s; animation-delay:-${delay}s;` });
-    }
-  }
-  return arr;
-}
-
-// 生成云层（全屏随机分布）
-function buildClouds() {
-  const n = 6;
-  const arr = [];
-  for (let i = 0; i < n; i++) {
-    const top = (6 + Math.random() * 72).toFixed(1); // 6%~78%
-    const w = (150 + Math.random() * 150).toFixed(0); // 150~300rpx
-    const h = (w * 0.42).toFixed(0);
-    const dur = (16 + Math.random() * 22).toFixed(1);
-    const delay = (-Math.random() * 30).toFixed(1);
-    arr.push({ id: i, style: `top:${top}%; width:${w}rpx; height:${h}rpx; animation-duration:${dur}s; animation-delay:${delay}s;` });
-  }
-  return arr;
 }
 
 // 天文信息计算：日照时长（HH小时MM分）、日照占比、月相表情、月出月落指示
@@ -145,8 +84,10 @@ function computeAstro(today) {
   if (!today) return out;
   // 日照时长
   if (today.sunrise && today.sunset) {
-    const [sh, sm] = String(today.sunrise).split(':').map(Number);
-    const [eh, em] = String(today.sunset).split(':').map(Number);
+    const sParts = String(today.sunrise).split(':');
+    const sh = Number(sParts[0]), sm = Number(sParts[1]);
+    const eParts = String(today.sunset).split(':');
+    const eh = Number(eParts[0]), em = Number(eParts[1]);
     if (sh != null && sm != null && eh != null && em != null) {
       let mins = (eh * 60 + em) - (sh * 60 + sm);
       if (mins < 0) mins += 24 * 60; // 跨午夜保护（极地）
@@ -175,7 +116,8 @@ function formatRadii(r) {
   if (!r) return '—';
   const order = [['r7', '7级'], ['r10', '10级'], ['r12', '12级']];
   const parts = [];
-  order.forEach(([k, label]) => {
+  order.forEach((item) => {
+    const k = item[0], label = item[1];
     const v = r[k];
     if (!v) return;
     // 各方向可能缺失（NMC 对远海台风常只给部分象限），缺失显示 —
@@ -213,9 +155,10 @@ function buildTyphoonMap(detail) {
         id: 0,
         latitude: cur.lat,
         longitude: cur.lon,
-        width: 22,
-        height: 22,
-        callout: { content: detail.name, color: '#fff', bgColor: '#FF4D4F', padding: 6, display: 'ALWAYS', textAlign: 'center' }
+        width: 24,
+        height: 24,
+        iconPath: '/images/icon-typhoon-marker.png',
+        callout: { content: detail.name, color: '#fff', bgColor: '#FF4D4F', padding: 6, display: 'ALWAYS', textAlign: 'center', borderRadius: 6 }
       }]
     : [];
 
@@ -260,10 +203,6 @@ Page({
     updateTime: '',
     error: false,
     errorMsg: '',
-    particles: [],
-    clouds: [],
-    rays: [0, 1, 2, 3],
-    heroTextClass: 'hero-light',
     // 气象预警徽标（无预警时为 null 隐藏）
     warning: null,
     // 天文信息（日照时长 / 月相表情 / 月出月落指示）
@@ -385,16 +324,17 @@ Page({
     const { id } = this.data.city;
 
     try {
-      const [nowData, dailyData, indicesData] = await Promise.all([
+      const allRes = await Promise.all([
         api.getWeatherNow(id),
         api.getWeather7d(id),
         api.getIndices(id, '0')
       ]);
+      const nowData = allRes[0];
+      const dailyData = allRes[1];
+      const indicesData = allRes[2];
 
       const now = nowData.now;
       const weatherInfo = util.getWeatherIcon(now.icon);
-      const effectType = getWeatherEffect(weatherInfo.text);
-      const isLight = (effectType === 'snow' || effectType === 'fog');
 
       // 7 天列表：补充图表所需字段（今天高亮 / MM/DD / 深色图标）
       const todayHyphen = util.formatDate(new Date());
@@ -418,7 +358,6 @@ Page({
           feelsLike: now.feelsLike,
           weatherText: weatherInfo.text,
           weatherIcon: weatherInfo.icon,
-          effectType,
           humidity: now.humidity,
           windDir: now.windDir || '',
           // 和风部分城市/无实况时 windScale 为 null/缺失，兜底为空字符串，渲染层统一显示"微风"
@@ -428,9 +367,6 @@ Page({
           pressure: now.pressure,
           precip: now.precip
         },
-        particles: buildParticles(effectType),
-        clouds: (effectType === 'cloud' || effectType === 'fog') ? buildClouds() : [],
-        heroTextClass: isLight ? 'hero-dark' : 'hero-light',
         daily: dailyList,
         todayIdx: dailyList.findIndex(d => d.isToday),
         astro,
@@ -501,16 +437,18 @@ Page({
       const res = await api.getMinutely5m(coord.lon, coord.lat);
       const list = res.minutely || [];
       if (list.length === 0) {
-        this.setData({ minutely: { summary: res.summary || '暂无降水预报', bars: [] } });
+        this.setData({ minutely: { summary: res.summary || '暂无降水预报', bars: [], hasRain: false } });
         return;
       }
-      const max = Math.max(0.1, ...list.map(x => Number(x.precip || 0)));
+      const rainPoints = list.map(x => Number(x.precip || 0));
+      const max = Math.max(0.1, ...rainPoints);
+      const hasRain = rainPoints.some(p => p > 0);
       const bars = list.map((x, i) => ({
         pct: Math.round((Number(x.precip || 0) / max) * 100),
         type: x.type,
         idx: i
       }));
-      this.setData({ minutely: { summary: res.summary || '', bars } });
+      this.setData({ minutely: { summary: res.summary || '', bars, hasRain } });
     } catch (err) {
       console.warn('获取分钟级降水失败:', err.message);
     }

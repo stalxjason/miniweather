@@ -269,7 +269,7 @@
 
       <!-- 搜索城市（沿用现有逻辑，选内陆城市会自动吸附到最近海岸） -->
       <view class="sp-search">
-        <input class="sp-search-input" placeholder="搜索城市 / 港口" value="{{searchKeyword}}" bindinput="onSearchInput" focus="{{true}}" confirm-type="search" />
+        <input class="sp-search-input" placeholder="搜索城市 / 港口" value="{{searchKeyword}}" bindinput="onSearchInput" focus="{{false}}" confirm-type="search" />
         <text class="sp-search-cancel" bindtap="closeStationPicker">取消</text>
       </view>
       <view class="sp-search-result" wx:if="{{searchResults.length > 0}}">

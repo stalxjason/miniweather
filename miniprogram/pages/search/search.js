@@ -90,7 +90,9 @@ Page({
     // 手动选城市：清空启动时的 GPS 精确坐标，潮汐页改跟随所选城市（否则仍按旧定位取数）
     getApp().globalData.currentLocation = null;
     const city = this.data.results[e.currentTarget.dataset.index];
-    this.saveAndGoBack(city);
+    if (city) {
+      this.saveAndGoBack(city);
+    }
   },
 
   selectHotCity(e) {
@@ -132,6 +134,8 @@ Page({
         const city = {
           id: loc.id,
           name: util.cityDisplayName(loc),
+          adm1: loc.adm1,
+          adm2: loc.adm2,
           lat: Number(loc.lat),
           lon: Number(loc.lon)
         };
@@ -146,8 +150,8 @@ Page({
       const fallback = {
         id: `${pos.lon},${pos.lat}`,
         name: '当前位置',
-        lat: pos.lat,
-        lon: pos.lon
+        lat: Number(pos.lat),
+        lon: Number(pos.lon)
       };
       app.globalData.currentLocation = { lat: pos.lat, lon: pos.lon };
       this.saveAndGoBack(fallback);
@@ -160,8 +164,10 @@ Page({
     app.globalData.currentCity = {
       id: city.id,
       name: city.name,
-      lat: city.lat,
-      lon: city.lon
+      adm1: city.adm1 || '',
+      adm2: city.adm2 || '',
+      lat: Number(city.lat),
+      lon: Number(city.lon)
     };
     wx.setStorageSync('currentCity', app.globalData.currentCity);
     wx.navigateBack();
