@@ -44,11 +44,26 @@
 }
 
 .locate-btn {
-  padding: 20rpx 30rpx;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 24rpx 30rpx;
   background: #FFFFFF;
   color: #1677FF;
   font-size: 28rpx;
+  font-weight: 500;
   border-bottom: 1rpx solid #F0F0F0;
+  transition: background 0.15s ease;
+}
+
+.locate-btn:active {
+  background: #F8FAFD;
+}
+
+.locate-icon {
+  width: 32rpx;
+  height: 32rpx;
+  flex-shrink: 0;
 }
 
 /* 搜索结果 */

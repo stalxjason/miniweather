@@ -5,7 +5,7 @@
     <!-- ===== Hero：城市 / 大字温度 / 天气+AQI / 指标 / 快讯卡 / 今明条 ===== -->
     <view class="hero-section">
       <view class="city-selector" bindtap="goToSearch">
-        <text class="city-pin">📍</text>
+        <image class="city-pin" src="/images/icon-location.svg" mode="aspectFit"></image>
         <text class="city-name">{{city.name}}</text>
         <view class="city-arrow"></view>
       </view>

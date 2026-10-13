@@ -49,21 +49,26 @@
   z-index: 1;
 }
 .city-pin {
-  font-size: 30rpx;
-  margin-right: 6rpx;
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+  display: block;
 }
 .city-name {
   font-size: 36rpx;
   font-weight: 700;
-  margin-right: 8rpx;
+  margin-right: 10rpx;
   letter-spacing: 0.5rpx;
+  line-height: 1.2;
 }
 .city-arrow {
   width: 0;
   height: 0;
-  border-left: 10rpx solid transparent;
-  border-right: 10rpx solid transparent;
-  border-top: 12rpx solid rgba(255, 255, 255, 0.85);
+  border-left: 9rpx solid transparent;
+  border-right: 9rpx solid transparent;
+  border-top: 11rpx solid rgba(255, 255, 255, 0.85);
+  margin-top: 4rpx;
 }
 
 /* 预警徽标（左上，橙/黄/红底白字） */

@@ -5,7 +5,7 @@
     <view class="hero-station-row" bindtap="openStationPicker">
       <view class="station-main">
         <view class="station-name-wrap">
-          <text class="station-icon">📍</text>
+          <image class="station-icon" src="/images/icon-location.svg" mode="aspectFit"></image>
           <text class="station-name">{{location.name || '海岸监测点'}}</text>
         </view>
         <!-- 状态标签：智能呈现当前定位、自选点位或就近海岸吸附信息 -->
@@ -282,7 +282,10 @@
 
       <scroll-view class="sp-scroll" scroll-y scroll-into-view="{{provinceScrollTo}}">
         <!-- 最近：按距离升序的前若干个 -->
-        <view class="sp-section-title">📍 离您最近</view>
+        <view class="sp-section-title">
+          <image class="sp-title-icon" src="/images/icon-location-blue.svg" mode="aspectFit"></image>
+          <text>离您最近</text>
+        </view>
         <view class="sp-item" wx:for="{{nearestStations}}" wx:key="name"
               data-name="{{item.name}}" data-lat="{{item.lat}}" data-lon="{{item.lon}}" bindtap="selectStation">
           <text class="sp-item-name">{{item.name}}</text>

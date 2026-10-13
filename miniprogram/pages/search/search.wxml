@@ -22,7 +22,8 @@
 
   <!-- 定位按钮 -->
   <view class="locate-btn" bindtap="locateCity">
-    <text>📍 使用当前位置</text>
+    <image class="locate-icon" src="/images/icon-location-blue.svg" mode="aspectFit"></image>
+    <text>使用当前位置</text>
   </view>
 
   <!-- 搜索结果 -->
